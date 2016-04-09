@@ -54,22 +54,13 @@ defaultGame =
 -- Game loop: Transition from one state to the next.
 update : Input -> Game -> Game
 update input game =
-  let
-  
-    newState =
-      if input.space then
-        Play
-      else
-        game.state
-
-  in
-    { game |
-        state = newState,
-        player = updatePlayer input game,
-        progress = updateProgress game,
-        autoRotateAngle = updateAutoRotateAngle game,
-        autoRotateSpeed = updateAutoRotateSpeed game
-    }
+  { game |
+      state = if input.space then Play else game.state,
+      player = updatePlayer input game,
+      progress = updateProgress game,
+      autoRotateAngle = updateAutoRotateAngle game,
+      autoRotateSpeed = updateAutoRotateSpeed game
+  }
 updatePlayer: Input -> Game -> Player
 updatePlayer {dir} {player} = 
   let 
