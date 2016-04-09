@@ -12,8 +12,9 @@ import Debug
 
 
 -- MODEL
-(gameWidth,gameHeight) = (600,400)
-(halfWidth,halfHeight) = (300,200)
+(gameWidth,gameHeight) = (800,600)
+(halfWidth,halfHeight) = (400,300)
+
 
 
 type State = Play | Pause
@@ -47,10 +48,13 @@ update : Input -> Game -> Game
 update {space,dir,delta} ({state,player,score} as game) =
   let
     newScore =
-      score + 1
+      if state == Play then
+       score + 1
+      else 
+        score
 
-    newAngle = player.angle + (toFloat dir) * 0.1
-    position = Debug.watch "Player angle" newAngle
+    newAngle =  Debug.watch "Player angle" (updatePlayerAngle player.angle dir)
+
 
     newState =
       if space then
@@ -67,6 +71,17 @@ update {space,dir,delta} ({state,player,score} as game) =
     }
 
 
+updatePlayerAngle: Float -> Int -> Float
+updatePlayerAngle angle dir = 
+  let 
+    newAngle = (angle + (toFloat dir) * 0.05)
+  in 
+    if newAngle < 0 then
+      newAngle + 2*pi
+    else if newAngle > 2*pi then
+      newAngle - 2*pi
+    else
+      newAngle
 
 -- VIEW
 bgBlack =
@@ -74,6 +89,9 @@ bgBlack =
 
 uiColor =
   rgb 160 200 160
+
+playerRadius = 
+  100
 
 
 txt f string =
@@ -84,13 +102,13 @@ txt f string =
     |> leftAligned
 
 
-msg = "SPACE to start, &uarr;&darr; to move"
+msg = "SPACE to start, &larr;&rarr; to move"
 
 makePlayer player =
-  ngon 3 15
-    |> filled white
+  ngon 3 10
+    |> filled (hsl player.angle 1 0.5)
+    |> move (playerRadius * cos player.angle, playerRadius * sin player.angle)
     |> rotate (player.angle)
-    |> move (0, 0)
 
 
 
@@ -125,7 +143,7 @@ gameState =
 
 
 delta =
-  Signal.map inSeconds (fps 30)
+  Signal.map inSeconds (fps 60)
 
 
 input : Signal Input
