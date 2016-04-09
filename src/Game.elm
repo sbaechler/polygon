@@ -4,6 +4,7 @@ module Game where
 import Color exposing (..)
 import Graphics.Collage exposing (..)
 import Graphics.Element exposing (..)
+import List exposing (..)
 import Keyboard
 import Text
 import Time exposing (..)
@@ -14,9 +15,10 @@ import Debug
 -- MODEL
 (gameWidth,gameHeight) = (800,600)
 (halfWidth,halfHeight) = (400,300)
+radius = halfWidth * 1.42
 
 
-
+-- Type definitions
 type State = Play | Pause
 
 type alias Player =
@@ -35,6 +37,7 @@ type alias Input =
   }
 
 
+-- The global game state
 defaultGame : Game
 defaultGame =
   { state = Pause
@@ -44,6 +47,7 @@ defaultGame =
 
 -- UPDATE
 
+-- Game loop: Transition from one state to the next.
 update : Input -> Game -> Game
 update {space,dir,delta} ({state,player,progress} as game) =
   let
@@ -149,7 +153,38 @@ makeObstacles progress =
     ]
 
 
+hexagonElement: Float -> Int -> List((Float, Float))
+hexagonElement r i =
+  Debug.watch "Element" [(0.0, 0.0),
+   (sin (degrees (toFloat (60 * i))) * r,
+    cos (degrees (toFloat (60 * i))) * r),
+   (sin (degrees (toFloat (60 * (i+1)))) * r,
+    cos (degrees (toFloat (60 * (i+1)))) * r)
+  ]
 
+
+makeField: Float -> Form
+makeField hue =
+  let
+    darkColor = hsl hue 0.7 0.2
+    brightColor = hsl hue 0.7 0.5
+
+    color i =
+      if i%2 == 0 then
+        darkColor
+      else
+        brightColor
+
+    poly i =
+      polygon (hexagonElement radius i)
+      |> filled (color i)
+
+  in
+    group (map poly [0..5])
+
+
+
+-- Render the game to the DOM.
 view : (Int,Int) -> Game -> Element
 view (w, h) game =
   let
@@ -160,6 +195,7 @@ view (w, h) game =
     collage gameWidth gameHeight
       [ rect gameWidth gameHeight
           |> filled bgBlack
+      , makeField 1.1
       , makeObstacles game.progress
       , makePlayer game.player
       , toForm progress
@@ -180,11 +216,12 @@ gameState : Signal Game
 gameState =
   Signal.foldp update defaultGame input
 
-
+-- Returns a clock signal
 delta =
   Signal.map inSeconds (fps 60)
 
-
+-- Creates an event stream from the keyboard inputs and the
+-- clock.
 input : Signal Input
 input =
   Signal.sampleOn delta <|
