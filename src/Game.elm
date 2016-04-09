@@ -215,9 +215,10 @@ view (w, h) game =
       [ rect gameWidth gameHeight
           |> filled bgBlack
       , group 
-        [ makeField 1.1
+        [ makeField (degrees 0.1 * (toFloat (game.progress % 3600)))
         , makeObstacles game.progress
         , makePlayer game.player
+        --- the polygon in the center: this is just decoration, so it has no own state
         , ngon 6 (70 + 10*(sin (0.2*(toFloat game.progress))))
           |> filled bgBlack
           |> rotate (degrees 90)
