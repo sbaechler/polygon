@@ -6887,10 +6887,10 @@ Elm.Game.make = function (_elm) {
    $Window = Elm.Window.make(_elm);
    var _op = {};
    var delta = A2($Signal.map,$Time.inSeconds,$Time.fps(60));
-   var trapez = F2(function (base,height) {
+   var trapez = F3(function (base,height,color) {
       var s = height / $Basics.tan($Basics.degrees(60));
       return A2($Graphics$Collage.filled,
-      $Color.red,
+      color,
       $Graphics$Collage.polygon(_U.list([{ctor: "_Tuple2",_0: (0 - base) / 2,_1: 0}
                                         ,{ctor: "_Tuple2",_0: base / 2,_1: 0}
                                         ,{ctor: "_Tuple2",_0: base / 2 - s,_1: height}
@@ -6901,29 +6901,30 @@ Elm.Game.make = function (_elm) {
       return $Graphics$Collage.move({ctor: "_Tuple2",_0: radius * $Basics.cos(angle),_1: radius * $Basics.sin(angle)});
    });
    var makeObstacle = F2(function (radius,opening) {
+      var color = A3($Color.hsl,radius / 100,1,0.5);
       var base = 2.0 * radius / $Basics.sqrt(3);
       return A2($Graphics$Collage.rotate,
       $Basics.degrees(opening) * 60,
       $Graphics$Collage.group(_U.list([A3(moveRadial,
                                       $Basics.degrees(0),
                                       radius,
-                                      A2($Graphics$Collage.rotate,$Basics.degrees(90),A2(trapez,base,obstacleThickness)))
+                                      A2($Graphics$Collage.rotate,$Basics.degrees(90),A3(trapez,base,obstacleThickness,color)))
                                       ,A3(moveRadial,
                                       $Basics.degrees(60),
                                       radius,
-                                      A2($Graphics$Collage.rotate,$Basics.degrees(150),A2(trapez,base,obstacleThickness)))
+                                      A2($Graphics$Collage.rotate,$Basics.degrees(150),A3(trapez,base,obstacleThickness,color)))
                                       ,A3(moveRadial,
                                       $Basics.degrees(120),
                                       radius,
-                                      A2($Graphics$Collage.rotate,$Basics.degrees(210),A2(trapez,base,obstacleThickness)))
+                                      A2($Graphics$Collage.rotate,$Basics.degrees(210),A3(trapez,base,obstacleThickness,color)))
                                       ,A3(moveRadial,
                                       $Basics.degrees(180),
                                       radius,
-                                      A2($Graphics$Collage.rotate,$Basics.degrees(270),A2(trapez,base,obstacleThickness)))
+                                      A2($Graphics$Collage.rotate,$Basics.degrees(270),A3(trapez,base,obstacleThickness,color)))
                                       ,A3(moveRadial,
                                       $Basics.degrees(240),
                                       radius,
-                                      A2($Graphics$Collage.rotate,$Basics.degrees(330),A2(trapez,base,obstacleThickness)))])));
+                                      A2($Graphics$Collage.rotate,$Basics.degrees(330),A3(trapez,base,obstacleThickness,color)))])));
    });
    var msg = "SPACE to start, &larr;&rarr; to move";
    var playerRadius = 100;

@@ -113,24 +113,25 @@ makePlayer player =
 
 obstacleThickness = 20
 
-trapez: Float -> Float -> Form
-trapez base height = 
+trapez: Float -> Float -> Color -> Form
+trapez base height color= 
   let 
     s = height/(tan (degrees 60))
   in
-    filled red (polygon [
+    filled color (polygon [
       (-base/2,0),(base/2,0),(base/2-s,height),(-base/2+s,height)
     ])
 makeObstacle radius opening = 
   let 
     base = 2.0* radius / (sqrt 3)
+    color = (hsl (radius/100) 1 0.5)
   in
     group 
-      [ (trapez base obstacleThickness) |> rotate (degrees 90) |> moveRadial (degrees 0) radius
-      , (trapez base obstacleThickness) |> rotate (degrees 150) |> moveRadial (degrees 60) radius
-      , (trapez base obstacleThickness) |> rotate (degrees 210) |> moveRadial (degrees 120) radius
-      , (trapez base obstacleThickness) |> rotate (degrees 270) |> moveRadial (degrees 180) radius
-      , (trapez base obstacleThickness) |> rotate (degrees 330) |> moveRadial (degrees 240) radius
+      [ (trapez base obstacleThickness color) |> rotate (degrees 90) |> moveRadial (degrees 0) radius
+      , (trapez base obstacleThickness color) |> rotate (degrees 150) |> moveRadial (degrees 60) radius
+      , (trapez base obstacleThickness color) |> rotate (degrees 210) |> moveRadial (degrees 120) radius
+      , (trapez base obstacleThickness color) |> rotate (degrees 270) |> moveRadial (degrees 180) radius
+      , (trapez base obstacleThickness color) |> rotate (degrees 330) |> moveRadial (degrees 240) radius
       --, (trapez base 20) |> rotate (degrees 30) |> moveRadial (degrees 300) radius
       ] |> rotate (degrees opening * 60)
 
