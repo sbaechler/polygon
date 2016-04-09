@@ -13,13 +13,13 @@ import Debug
 
 
 -- MODEL
-(gameWidth,gameHeight) = (800,600)
-(halfWidth,halfHeight) = (400,300)
+(gameWidth,gameHeight) = (1024,768)
+(halfWidth,halfHeight) = (512,384)
 radius = halfWidth * 1.42
 
 
 -- Type definitions
-type State = Play | Pause
+type State = Play | Pause 
 
 type alias Player =
   { angle: Float }
@@ -89,7 +89,7 @@ updateAutoRotateAngle {autoRotateAngle, autoRotateSpeed} =
 
 updateAutoRotateSpeed: Game -> Float
 updateAutoRotateSpeed {progress, autoRotateSpeed} = 
-  Debug.watch "autoRotateSpeed" (0.02 * sin (Debug.watch "foo" (toFloat progress * 0.005)))
+  Debug.watch "autoRotateSpeed" <| 0.02 * sin (Debug.watch "foo" (toFloat progress * 0.005))
 
 
 updatePlayerAngle: Float -> Int -> Float
@@ -131,7 +131,7 @@ makePlayer player =
   ngon 3 10
     |> filled (hsl player.angle 1 0.5)
     |> moveRadial player.angle (playerRadius - 10)
-    |> rotate (player.angle)
+    |> rotate player.angle
 
 
 obstacleThickness = 20
@@ -208,18 +208,18 @@ view : (Int,Int) -> Game -> Element
 view (w, h) game =
   let
     progress =
-      txt (Text.height 50) (toString game.progress)
+      txt (Text.height 50) <| toString game.progress
   in
     container w h middle <|
     collage gameWidth gameHeight
       [ rect gameWidth gameHeight
           |> filled bgBlack
       , group 
-        [ makeField (degrees 0.1 * (toFloat (game.progress % 3600)))
+        [ makeField <| degrees 0.1 * (toFloat <| game.progress % 3600)
         , makeObstacles game.progress
         , makePlayer game.player
         --- the polygon in the center: this is just decoration, so it has no own state
-        , ngon 6 (70 + 10*(sin (0.2*(toFloat game.progress))))
+        , ngon 6 (70 + 10*(sin <| 0.2* toFloat game.progress))
           |> filled bgBlack
           |> rotate (degrees 90)
         ] |> rotate game.autoRotateAngle
