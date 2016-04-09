@@ -27,7 +27,9 @@ type alias Player =
 type alias Game =
   { state: State,
     player : Player,
-    progress : Int
+    progress : Int,
+    autoRotateAngle: Float,
+    autoRotateSpeed: Float
   }
 
 type alias Input =
@@ -43,34 +45,51 @@ defaultGame =
   { state = Pause
   , player = Player 0.0
   , progress = 0
+  , autoRotateAngle = 0.0
+  , autoRotateSpeed = 0.0
   }
 
 -- UPDATE
 
 -- Game loop: Transition from one state to the next.
 update : Input -> Game -> Game
-update {space,dir,delta} ({state,player,progress} as game) =
+update input game =
   let
-    newProgress =
-      if state == Play then
-        progress + 1
-      else 
-        progress
-
-    newAngle =  Debug.watch "Player angle" (updatePlayerAngle player.angle -dir)
-
+  
     newState =
-      if space then
+      if input.space then
         Play
       else
-        state
+        game.state
 
   in
     { game |
         state = newState,
-        player = { player | angle = newAngle },
-        progress = newProgress
+        player = updatePlayer input game,
+        progress = updateProgress game,
+        autoRotateAngle = updateAutoRotateAngle game,
+        autoRotateSpeed = updateAutoRotateSpeed game
     }
+updatePlayer: Input -> Game -> Player
+updatePlayer {dir} {player} = 
+  let 
+    newAngle =  Debug.watch "Player angle" (updatePlayerAngle player.angle -dir)
+  in
+    { player | angle = newAngle }
+updateProgress: Game -> Int
+updateProgress {state,progress} = 
+  if state == Play then
+    progress + 1
+  else 
+    progress
+autoRotateDelta = 0.001
+updateAutoRotateAngle: Game -> Float
+updateAutoRotateAngle {autoRotateAngle, autoRotateSpeed} = 
+  autoRotateAngle + autoRotateSpeed
+
+updateAutoRotateSpeed: Game -> Float
+updateAutoRotateSpeed {progress, autoRotateSpeed} = 
+  Debug.watch "autoRotateSpeed" (0.02 * sin (Debug.watch "foo" (toFloat progress * 0.005)))
 
 
 updatePlayerAngle: Float -> Int -> Float
@@ -143,8 +162,8 @@ makeObstacle radius opening =
 makeObstacles progress = 
   let 
     radius1 = Debug.watch "obstacleradius" (obstacleThickness + toFloat ((halfWidth - progress) % halfWidth))
-    radius2 = Debug.watch "obstacleradius" (obstacleThickness + toFloat ((100 + halfWidth - progress) % halfWidth))
-    radius3 = Debug.watch "obstacleradius" (obstacleThickness + toFloat ((200 + halfWidth - progress) % halfWidth))
+    radius2 = Debug.watch "obstacleradius2" (obstacleThickness + toFloat ((100 + halfWidth - progress) % halfWidth))
+    radius3 = Debug.watch "obstacleradius3" (obstacleThickness + toFloat ((200 + halfWidth - progress) % halfWidth))
   in
     group 
     [ makeObstacle radius1 0
@@ -195,9 +214,14 @@ view (w, h) game =
     collage gameWidth gameHeight
       [ rect gameWidth gameHeight
           |> filled bgBlack
-      , makeField 1.1
-      , makeObstacles game.progress
-      , makePlayer game.player
+      , group 
+        [ makeField 1.1
+        , makeObstacles game.progress
+        , makePlayer game.player
+        , ngon 6 (70 + 10*(sin (0.2*(toFloat game.progress))))
+          |> filled bgBlack
+          |> rotate (degrees 90)
+        ] |> rotate game.autoRotateAngle
       , toForm progress
           |> move (0, gameHeight/2 - 40)
       , toForm (if game.state == Play then spacer 1 1 else txt identity msg)
