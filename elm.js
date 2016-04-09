@@ -7817,11 +7817,15 @@ Elm.Game.make = function (_elm) {
    $Window = Elm.Window.make(_elm);
    var _op = {};
    var delta = A2($Signal.map,$Time.inSeconds,$Time.fps(30));
-   var make = F2(function (obj,shape) {
+   var makePlayer = function (player) {
       return A2($Graphics$Collage.move,
       {ctor: "_Tuple2",_0: 0,_1: 0},
-      A2($Graphics$Collage.filled,$Color.white,shape));
-   });
+      A2($Graphics$Collage.rotate,
+      player.angle,
+      A2($Graphics$Collage.filled,
+      $Color.white,
+      A2($Graphics$Collage.ngon,3,15))));
+   };
    var msg = "SPACE to start, &uarr;&darr; to move";
    var uiColor = A3($Color.rgb,160,200,160);
    var txt = F2(function (f,string) {
@@ -7850,26 +7854,31 @@ Elm.Game.make = function (_elm) {
    var update = F2(function (_p1,_p0) {
       var _p2 = _p1;
       var _p3 = _p0;
+      var _p4 = _p3.player;
       var newState = _p2.space ? Play : _p3.state;
+      var newAngle = _p4.angle + $Basics.toFloat(_p2.dir) * 0.1;
+      var position = A2($Debug.watch,"Player angle",newAngle);
       var newScore = _p3.score + 1;
       return _U.update(_p3,
-      {state: newState,player: _p3.player,score: newScore});
+      {state: newState
+      ,player: _U.update(_p4,{angle: newAngle})
+      ,score: newScore});
    });
    var gameState = A3($Signal.foldp,update,defaultGame,input);
-   var _p4 = {ctor: "_Tuple2",_0: 300,_1: 200};
-   var halfWidth = _p4._0;
-   var halfHeight = _p4._1;
-   var _p5 = {ctor: "_Tuple2",_0: 600,_1: 400};
-   var gameWidth = _p5._0;
-   var gameHeight = _p5._1;
-   var view = F2(function (_p6,game) {
-      var _p7 = _p6;
+   var _p5 = {ctor: "_Tuple2",_0: 300,_1: 200};
+   var halfWidth = _p5._0;
+   var halfHeight = _p5._1;
+   var _p6 = {ctor: "_Tuple2",_0: 600,_1: 400};
+   var gameWidth = _p6._0;
+   var gameHeight = _p6._1;
+   var view = F2(function (_p7,game) {
+      var _p8 = _p7;
       var score = A2(txt,
       $Text.height(50),
       $Basics.toString(game.score));
       return A4($Graphics$Element.container,
-      _p7._0,
-      _p7._1,
+      _p8._0,
+      _p8._1,
       $Graphics$Element.middle,
       A3($Graphics$Collage.collage,
       gameWidth,
@@ -7877,7 +7886,7 @@ Elm.Game.make = function (_elm) {
       _U.list([A2($Graphics$Collage.filled,
               bgBlack,
               A2($Graphics$Collage.rect,gameWidth,gameHeight))
-              ,A2(make,game.player,A2($Graphics$Collage.oval,15,15))
+              ,makePlayer(game.player)
               ,A2($Graphics$Collage.move,
               {ctor: "_Tuple2",_0: 0,_1: gameHeight / 2 - 40},
               $Graphics$Collage.toForm(score))
@@ -7905,7 +7914,7 @@ Elm.Game.make = function (_elm) {
                              ,uiColor: uiColor
                              ,txt: txt
                              ,msg: msg
-                             ,make: make
+                             ,makePlayer: makePlayer
                              ,view: view
                              ,main: main
                              ,gameState: gameState

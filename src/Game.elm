@@ -8,6 +8,8 @@ import Keyboard
 import Text
 import Time exposing (..)
 import Window
+import Debug
+
 
 -- MODEL
 (gameWidth,gameHeight) = (600,400)
@@ -47,6 +49,9 @@ update {space,dir,delta} ({state,player,score} as game) =
     newScore =
       score + 1
 
+    newAngle = player.angle + (toFloat dir) * 0.1
+    position = Debug.watch "Player angle" newAngle
+
     newState =
       if space then
           Play
@@ -57,7 +62,7 @@ update {space,dir,delta} ({state,player,score} as game) =
   in
     { game |
         state = newState,
-        player = player,
+        player = { player | angle = newAngle },
         score = newScore
     }
 
@@ -81,9 +86,10 @@ txt f string =
 
 msg = "SPACE to start, &uarr;&darr; to move"
 
-make obj shape =
-  shape
+makePlayer player =
+  ngon 3 15
     |> filled white
+    |> rotate (player.angle)
     |> move (0, 0)
 
 
@@ -98,8 +104,7 @@ view (w, h) game =
     collage gameWidth gameHeight
       [ rect gameWidth gameHeight
           |> filled bgBlack
-      , oval 15 15
-          |> make game.player
+      , makePlayer game.player
       , toForm score
           |> move (0, gameHeight/2 - 40)
       , toForm (if game.state == Play then spacer 1 1 else txt identity msg)
