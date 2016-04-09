@@ -25,7 +25,7 @@ type alias Player =
 type alias Game =
   { state: State,
     player : Player,
-    score : Int
+    progress : Int
   }
 
 type alias Input =
@@ -39,21 +39,21 @@ defaultGame : Game
 defaultGame =
   { state = Pause
   , player = Player 0.0
-  , score = 0
+  , progress = 0
   }
 
 -- UPDATE
 
 update : Input -> Game -> Game
-update {space,dir,delta} ({state,player,score} as game) =
+update {space,dir,delta} ({state,player,progress} as game) =
   let
-    newScore =
+    newProgress =
       if state == Play then
-       score + 1
+        progress + 1
       else 
-        score
+        progress
 
-    newAngle =  Debug.watch "Player angle" (updatePlayerAngle player.angle dir)
+    newAngle =  Debug.watch "Player angle" (updatePlayerAngle player.angle -dir)
 
     newState =
       if space then
@@ -65,7 +65,7 @@ update {space,dir,delta} ({state,player,score} as game) =
     { game |
         state = newState,
         player = { player | angle = newAngle },
-        score = newScore
+        progress = newProgress
     }
 
 
@@ -111,7 +111,7 @@ makePlayer player =
     |> rotate (player.angle)
 
 
-height = 10
+obstacleThickness = 20
 
 trapez: Float -> Float -> Form
 trapez base height = 
@@ -126,29 +126,42 @@ makeObstacle radius opening =
     base = 2.0* radius / (sqrt 3)
   in
     group 
-      [ (trapez base 20) |> rotate (degrees 90) |> moveRadial (degrees 0) radius
-      , (trapez base 20) |> rotate (degrees 150) |> moveRadial (degrees 60) radius
-      , (trapez base 20) |> rotate (degrees 210) |> moveRadial (degrees 120) radius
-      , (trapez base 20) |> rotate (degrees 270) |> moveRadial (degrees 180) radius
-      , (trapez base 20) |> rotate (degrees 330) |> moveRadial (degrees 240) radius
+      [ (trapez base obstacleThickness) |> rotate (degrees 90) |> moveRadial (degrees 0) radius
+      , (trapez base obstacleThickness) |> rotate (degrees 150) |> moveRadial (degrees 60) radius
+      , (trapez base obstacleThickness) |> rotate (degrees 210) |> moveRadial (degrees 120) radius
+      , (trapez base obstacleThickness) |> rotate (degrees 270) |> moveRadial (degrees 180) radius
+      , (trapez base obstacleThickness) |> rotate (degrees 330) |> moveRadial (degrees 240) radius
       --, (trapez base 20) |> rotate (degrees 30) |> moveRadial (degrees 300) radius
       ] |> rotate (degrees opening * 60)
+
+
+makeObstacles progress = 
+  let 
+    radius1 = Debug.watch "obstacleradius" (obstacleThickness + toFloat ((halfWidth - progress) % halfWidth))
+    radius2 = Debug.watch "obstacleradius" (obstacleThickness + toFloat ((100 + halfWidth - progress) % halfWidth))
+    radius3 = Debug.watch "obstacleradius" (obstacleThickness + toFloat ((200 + halfWidth - progress) % halfWidth))
+  in
+    group 
+    [ makeObstacle radius1 0
+    , makeObstacle radius2 1
+    , makeObstacle radius3 2
+    ]
+
+
 
 view : (Int,Int) -> Game -> Element
 view (w, h) game =
   let
-    score =
-      txt (Text.height 50) (toString game.score)
+    progress =
+      txt (Text.height 50) (toString game.progress)
   in
     container w h middle <|
     collage gameWidth gameHeight
       [ rect gameWidth gameHeight
           |> filled bgBlack
-      , makeObstacle 180 0
-      , makeObstacle 120 1
-      , makeObstacle 240 2
+      , makeObstacles game.progress
       , makePlayer game.player
-      , toForm score
+      , toForm progress
           |> move (0, gameHeight/2 - 40)
       , toForm (if game.state == Play then spacer 1 1 else txt identity msg)
           |> move (0, 40 - gameHeight/2)
