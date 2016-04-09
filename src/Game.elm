@@ -55,13 +55,11 @@ update {space,dir,delta} ({state,player,score} as game) =
 
     newAngle =  Debug.watch "Player angle" (updatePlayerAngle player.angle dir)
 
-
     newState =
       if space then
-          Play
-
+        Play
       else
-          state
+        state
 
   in
     { game |
@@ -104,13 +102,37 @@ txt f string =
 
 msg = "SPACE to start, &larr;&rarr; to move"
 
+moveRadial angle radius = 
+  move (radius * cos angle, radius * sin angle)
 makePlayer player =
   ngon 3 10
     |> filled (hsl player.angle 1 0.5)
-    |> move (playerRadius * cos player.angle, playerRadius * sin player.angle)
+    |> moveRadial player.angle (playerRadius - 10)
     |> rotate (player.angle)
 
 
+height = 10
+
+trapez: Float -> Float -> Form
+trapez base height = 
+  let 
+    s = height/(tan (degrees 60))
+  in
+    filled red (polygon [
+      (-base/2,0),(base/2,0),(base/2-s,height),(-base/2+s,height)
+    ])
+makeObstacle radius opening = 
+  let 
+    base = 2.0* radius / (sqrt 3)
+  in
+    group 
+      [ (trapez base 20) |> rotate (degrees 90) |> moveRadial (degrees 0) radius
+      , (trapez base 20) |> rotate (degrees 150) |> moveRadial (degrees 60) radius
+      , (trapez base 20) |> rotate (degrees 210) |> moveRadial (degrees 120) radius
+      , (trapez base 20) |> rotate (degrees 270) |> moveRadial (degrees 180) radius
+      , (trapez base 20) |> rotate (degrees 330) |> moveRadial (degrees 240) radius
+      --, (trapez base 20) |> rotate (degrees 30) |> moveRadial (degrees 300) radius
+      ] |> rotate (degrees opening * 60)
 
 view : (Int,Int) -> Game -> Element
 view (w, h) game =
@@ -122,6 +144,9 @@ view (w, h) game =
     collage gameWidth gameHeight
       [ rect gameWidth gameHeight
           |> filled bgBlack
+      , makeObstacle 180 0
+      , makeObstacle 120 1
+      , makeObstacle 240 2
       , makePlayer game.player
       , toForm score
           |> move (0, gameHeight/2 - 40)
