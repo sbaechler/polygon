@@ -1,5 +1,5 @@
 
-module Game where
+--module Game where
 
 import Color exposing (..)
 import Graphics.Collage exposing (..)
