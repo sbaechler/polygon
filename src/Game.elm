@@ -92,7 +92,7 @@ updateAutoRotateSpeed {progress, autoRotateSpeed} =
 updatePlayerAngle: Float -> Int -> Float
 updatePlayerAngle angle dir =
   let
-    newAngle = (angle + (toFloat dir) * 0.05)
+    newAngle = (angle + (toFloat (dir * speed)) * 0.032)
   in
     if newAngle < 0 then
       newAngle + 2*pi
@@ -114,6 +114,9 @@ uiColor =
 
 playerRadius : Float
 playerRadius = gameWidth / 10.0
+
+speed : Int
+speed = 3
 
 msg : String
 msg = "SPACE to start, &larr;&rarr; to move"
@@ -167,9 +170,9 @@ makeObstacle radius opening =
 makeObstacles : Int -> Form
 makeObstacles progress =
   let
-    radius1 = Debug.watch "obstacleradius" (obstacleThickness + toFloat ((halfWidth - progress) % halfWidth))
-    radius2 = Debug.watch "obstacleradius2" (obstacleThickness + toFloat ((100 + halfWidth - progress) % halfWidth))
-    radius3 = Debug.watch "obstacleradius3" (obstacleThickness + toFloat ((200 + halfWidth - progress) % halfWidth))
+    radius1 = Debug.watch "obstacleradius" (obstacleThickness + (toFloat ((halfWidth - progress * speed) % halfWidth)))
+    radius2 = Debug.watch "obstacleradius2" (obstacleThickness + (toFloat ((150 + halfWidth - progress * speed) % halfWidth)))
+    radius3 = Debug.watch "obstacleradius3" (obstacleThickness + (toFloat ((300 + halfWidth - progress * speed) % halfWidth)))
   in
     group
     [ makeObstacle radius1 0
