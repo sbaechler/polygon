@@ -13,13 +13,16 @@ import Debug
 
 
 -- MODEL
-(gameWidth,gameHeight) = (1024,768)
-(halfWidth,halfHeight) = (512,384)
-radius = halfWidth * 1.42
+(gameWidth,gameHeight) = (1024, 576) -- 16:9
+(halfWidth,halfHeight) = (gameWidth//2, gameHeight//2)
+radius : Float
+radius = toFloat halfWidth * 1.42
+obstacleThickness = 30
+
 
 
 -- Type definitions
-type State = Play | Pause 
+type State = Play | Pause
 
 type alias Player =
   { angle: Float }
@@ -61,33 +64,36 @@ update input game =
       autoRotateAngle = updateAutoRotateAngle game,
       autoRotateSpeed = updateAutoRotateSpeed game
   }
+
 updatePlayer: Input -> Game -> Player
-updatePlayer {dir} {player} = 
-  let 
+updatePlayer {dir} {player} =
+  let
     newAngle =  Debug.watch "Player angle" (updatePlayerAngle player.angle -dir)
   in
     { player | angle = newAngle }
+
 updateProgress: Game -> Int
-updateProgress {state,progress} = 
+updateProgress {state,progress} =
   if state == Play then
     progress + 1
-  else 
+  else
     progress
-autoRotateDelta = 0.001
+
+
 updateAutoRotateAngle: Game -> Float
-updateAutoRotateAngle {autoRotateAngle, autoRotateSpeed} = 
+updateAutoRotateAngle {autoRotateAngle, autoRotateSpeed} =
   autoRotateAngle + autoRotateSpeed
 
 updateAutoRotateSpeed: Game -> Float
-updateAutoRotateSpeed {progress, autoRotateSpeed} = 
-  Debug.watch "autoRotateSpeed" <| 0.02 * sin (Debug.watch "foo" (toFloat progress * 0.005))
+updateAutoRotateSpeed {progress, autoRotateSpeed} =
+  Debug.watch "autoRotateSpeed" <| 0.02 * sin (Debug.watch "φ" (toFloat progress * 0.005))
 
 
 updatePlayerAngle: Float -> Int -> Float
-updatePlayerAngle angle dir = 
-  let 
+updatePlayerAngle angle dir =
+  let
     newAngle = (angle + (toFloat dir) * 0.05)
-  in 
+  in
     if newAngle < 0 then
       newAngle + 2*pi
     else if newAngle > 2*pi then
@@ -95,15 +101,22 @@ updatePlayerAngle angle dir =
     else
       newAngle
 
+
+
 -- VIEW
+bgBlack : Color
 bgBlack =
-  rgb 40 40 40
+  rgb 20 20 20
 
+uiColor : Color
 uiColor =
-  rgb 160 200 160
+  rgb 255 255 255
 
-playerRadius = 
-  100
+playerRadius : Float
+playerRadius = gameWidth / 10.0
+
+msg : String
+msg = "SPACE to start, &larr;&rarr; to move"
 
 
 txt f string =
@@ -114,10 +127,11 @@ txt f string =
     |> leftAligned
 
 
-msg = "SPACE to start, &larr;&rarr; to move"
-
-moveRadial angle radius = 
+moveRadial : Float -> Float -> Form -> Form
+moveRadial angle radius =
   move (radius * cos angle, radius * sin angle)
+
+makePlayer : Player -> Form
 makePlayer player =
   ngon 3 10
     |> filled (hsl player.angle 1 0.5)
@@ -125,38 +139,39 @@ makePlayer player =
     |> rotate player.angle
 
 
-obstacleThickness = 20
 
-trapez: Float -> Float -> Color -> Form
-trapez base height color= 
-  let 
+trapezoid: Float -> Float -> Color -> Form
+trapezoid base height color=
+  let
     s = height/(tan (degrees 60))
   in
     filled color (polygon [
-      (-base/2,0),(base/2,0),(base/2-s,height),(-base/2+s,height)
+      (-base/2, 0), (base/2, 0), (base/2-s, height), (-base/2+s, height)
     ])
-makeObstacle radius opening = 
-  let 
-    base = 2.0* radius / (sqrt 3)
+
+makeObstacle : Float -> Float -> Form
+makeObstacle radius opening =
+  let
+    base = 2.0 * radius / (sqrt 3)
     color = (hsl (radius/100) 1 0.5)
   in
-    group 
-      [ (trapez base obstacleThickness color) |> rotate (degrees 90) |> moveRadial (degrees 0) radius
-      , (trapez base obstacleThickness color) |> rotate (degrees 150) |> moveRadial (degrees 60) radius
-      , (trapez base obstacleThickness color) |> rotate (degrees 210) |> moveRadial (degrees 120) radius
-      , (trapez base obstacleThickness color) |> rotate (degrees 270) |> moveRadial (degrees 180) radius
-      , (trapez base obstacleThickness color) |> rotate (degrees 330) |> moveRadial (degrees 240) radius
-      --, (trapez base 20) |> rotate (degrees 30) |> moveRadial (degrees 300) radius
+    group
+      [ (trapezoid base obstacleThickness color) |> rotate (degrees 90) |> moveRadial (degrees 0) radius
+      , (trapezoid base obstacleThickness color) |> rotate (degrees 150) |> moveRadial (degrees 60) radius
+      , (trapezoid base obstacleThickness color) |> rotate (degrees 210) |> moveRadial (degrees 120) radius
+      , (trapezoid base obstacleThickness color) |> rotate (degrees 270) |> moveRadial (degrees 180) radius
+      , (trapezoid base obstacleThickness color) |> rotate (degrees 330) |> moveRadial (degrees 240) radius
+      --, (trapezoid base 20) |> rotate (degrees 30) |> moveRadial (degrees 300) radius
       ] |> rotate (degrees opening * 60)
 
-
-makeObstacles progress = 
-  let 
+makeObstacles : Int -> Form
+makeObstacles progress =
+  let
     radius1 = Debug.watch "obstacleradius" (obstacleThickness + toFloat ((halfWidth - progress) % halfWidth))
     radius2 = Debug.watch "obstacleradius2" (obstacleThickness + toFloat ((100 + halfWidth - progress) % halfWidth))
     radius3 = Debug.watch "obstacleradius3" (obstacleThickness + toFloat ((200 + halfWidth - progress) % halfWidth))
   in
-    group 
+    group
     [ makeObstacle radius1 0
     , makeObstacle radius2 1
     , makeObstacle radius3 2
@@ -176,8 +191,8 @@ hexagonElement r i =
 makeField: Float -> Form
 makeField hue =
   let
-    darkColor = hsl hue 0.7 0.2
-    brightColor = hsl hue 0.7 0.5
+    darkColor = hsl hue 0.6 0.2
+    brightColor = hsl hue 0.6 0.3
 
     color i =
       if i%2 == 0 then
@@ -192,7 +207,12 @@ makeField hue =
   in
     group (map poly [0..5])
 
-
+--- the polygon in the center: this is just decoration, so it has no own state
+makeCenterHole : Int -> Form
+makeCenterHole progress =
+    ngon 6 (60 + 10 * (sin <| 0.2* toFloat progress))
+          |> filled bgBlack
+          |> rotate (degrees 90)
 
 -- Render the game to the DOM.
 view : (Int,Int) -> Game -> Element
@@ -205,15 +225,13 @@ view (w, h) game =
     collage gameWidth gameHeight
       [ rect gameWidth gameHeight
           |> filled bgBlack
-      , group 
-        [ makeField <| degrees 0.1 * (toFloat <| game.progress % 3600)
+      , group [
+        makeField <| degrees 0.1 * (toFloat <| game.progress % 3600)
         , makeObstacles game.progress
         , makePlayer game.player
-        --- the polygon in the center: this is just decoration, so it has no own state
-        , ngon 6 (70 + 10*(sin <| 0.2* toFloat game.progress))
-          |> filled bgBlack
-          |> rotate (degrees 90)
-        ] |> rotate game.autoRotateAngle
+        , makeCenterHole game.progress
+        ]
+        |> rotate game.autoRotateAngle
       , toForm progress
           |> move (0, gameHeight/2 - 40)
       , toForm (if game.state == Play then spacer 1 1 else txt identity msg)
