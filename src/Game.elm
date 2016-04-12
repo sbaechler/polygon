@@ -1,5 +1,4 @@
-
---module Game where
+module Game where
 
 import Color exposing (..)
 import Graphics.Collage exposing (..)
@@ -7,18 +6,21 @@ import Graphics.Element exposing (..)
 import List exposing (..)
 import Keyboard
 import Text
-import Time exposing (..)
+import Time exposing ( .. )
 import Window
 import Debug
 
 
 -- MODEL
-(gameWidth,gameHeight) = (1024, 576) -- 16:9
-(halfWidth,halfHeight) = (gameWidth//2, gameHeight//2)
+(gameWidth, gameHeight) = (1024, 576) -- 16:9
+(halfWidth, halfHeight) = (gameWidth/2, gameHeight/2)
+(iHalfWidth, iHalfHeight) = (gameWidth//2, gameHeight//2)
 radius : Float
-radius = toFloat halfWidth * 1.42
+radius = halfWidth * 1.42
 obstacleThickness = 30
 
+fps : Int
+fps = 60   --TODO: Make movement independent from fps
 
 
 -- Type definitions
@@ -38,7 +40,13 @@ type alias Game =
 type alias Input =
   { space : Bool
   , dir : Int
-  , delta : Time
+  , delta : Time.Time
+  }
+
+type alias Colors =
+  { dark : Color
+  , medium: Color
+  , bright : Color
   }
 
 
@@ -92,7 +100,7 @@ updateAutoRotateSpeed {progress, autoRotateSpeed} =
 updatePlayerAngle: Float -> Int -> Float
 updatePlayerAngle angle dir =
   let
-    newAngle = (angle + (toFloat (dir * speed)) * 0.032)
+    newAngle = (angle + toFloat (dir * speed) * 0.032)
   in
     if newAngle < 0 then
       newAngle + 2*pi
@@ -116,7 +124,7 @@ playerRadius : Float
 playerRadius = gameWidth / 10.0
 
 speed : Int
-speed = 3
+speed = 4
 
 msg : String
 msg = "SPACE to start, &larr;&rarr; to move"
@@ -144,7 +152,7 @@ makePlayer player =
 
 
 trapezoid: Float -> Float -> Color -> Form
-trapezoid base height color=
+trapezoid base height color =
   let
     s = height/(tan (degrees 60))
   in
@@ -152,11 +160,12 @@ trapezoid base height color=
       (-base/2, 0), (base/2, 0), (base/2-s, height), (-base/2+s, height)
     ])
 
-makeObstacle : Float -> Float -> Form
-makeObstacle radius opening =
+makeObstacle : Float -> Color -> Float -> Form
+makeObstacle radius color opening =
   let
     base = 2.0 * radius / (sqrt 3)
-    color = (hsl (radius/100) 1 0.5)
+
+    -- color = (hsl (radius/100) 1 0.5)
   in
     group
       [ (trapezoid base obstacleThickness color) |> rotate (degrees 90) |> moveRadial (degrees 0) radius
@@ -167,17 +176,17 @@ makeObstacle radius opening =
       --, (trapezoid base 20) |> rotate (degrees 30) |> moveRadial (degrees 300) radius
       ] |> rotate (degrees opening * 60)
 
-makeObstacles : Int -> Form
-makeObstacles progress =
+makeObstacles : Color -> Int -> Form
+makeObstacles color progress =
   let
-    radius1 = Debug.watch "obstacleradius" (obstacleThickness + (toFloat ((halfWidth - progress * speed) % halfWidth)))
-    radius2 = Debug.watch "obstacleradius2" (obstacleThickness + (toFloat ((150 + halfWidth - progress * speed) % halfWidth)))
-    radius3 = Debug.watch "obstacleradius3" (obstacleThickness + (toFloat ((300 + halfWidth - progress * speed) % halfWidth)))
+    radius1 = Debug.watch "obstacleradius" (obstacleThickness + toFloat ((iHalfWidth - progress * speed) % iHalfWidth))
+    radius2 = Debug.watch "obstacleradius2" (obstacleThickness + toFloat ((iHalfWidth + 150 - progress * speed) % iHalfWidth))
+    radius3 = Debug.watch "obstacleradius3" (obstacleThickness + toFloat ((iHalfWidth + 300 - progress * speed) % iHalfWidth))
   in
     group
-    [ makeObstacle radius1 0
-    , makeObstacle radius2 1
-    , makeObstacle radius3 2
+    [ makeObstacle radius1 color 0
+    , makeObstacle radius2 color 1
+    , makeObstacle radius3 color 2
     ]
 
 
@@ -191,17 +200,15 @@ hexagonElement r i =
   ]
 
 
-makeField: Float -> Form
-makeField hue =
+makeField: Colors -> Form
+makeField colors =
   let
-    darkColor = hsl hue 0.6 0.2
-    brightColor = hsl hue 0.6 0.3
 
     color i =
       if i%2 == 0 then
-        darkColor
+        colors.dark
       else
-        brightColor
+        colors.medium
 
     poly i =
       polygon (hexagonElement radius i)
@@ -211,11 +218,30 @@ makeField hue =
     group (map poly [0..5])
 
 --- the polygon in the center: this is just decoration, so it has no own state
-makeCenterHole : Int -> Form
-makeCenterHole progress =
-    ngon 6 (60 + 10 * (sin <| 0.2* toFloat progress))
-          |> filled bgBlack
-          |> rotate (degrees 90)
+makeCenterHole : Colors -> Int -> List Form
+makeCenterHole colors progress =
+  let
+    shape = ngon 6 (60 + 10 * (sin <| 0.2* toFloat progress))
+    line = solid colors.bright
+  in
+    [shape
+      |> filled colors.dark
+      |> rotate (degrees 90)
+    ,shape
+      |> (outlined {line | width = 4.0})
+      |> rotate (degrees 90)
+    ]
+
+makeColors : Int -> Colors
+makeColors progress =
+  let
+    hue = degrees 0.1 * (toFloat <| progress % 3600)
+  in
+    { dark = (hsl hue 0.6 0.2)
+    , medium = (hsl hue 0.6 0.3)
+    , bright = (hsla hue 0.6 0.6 0.8)
+    }
+
 
 -- Render the game to the DOM.
 view : (Int,Int) -> Game -> Element
@@ -223,29 +249,32 @@ view (w, h) game =
   let
     progress =
       txt (Text.height 50) <| toString game.progress
+    colors = makeColors game.progress
+
   in
     container w h middle <|
     collage gameWidth gameHeight
       [ rect gameWidth gameHeight
           |> filled bgBlack
-      , group [
-        makeField <| degrees 0.1 * (toFloat <| game.progress % 3600)
-        , makeObstacles game.progress
+      , group (append [
+        makeField colors
+        , makeObstacles colors.bright game.progress
         , makePlayer game.player
-        , makeCenterHole game.progress
         ]
-        |> rotate game.autoRotateAngle
+        (makeCenterHole colors game.progress)
+      )
+      |> rotate game.autoRotateAngle
       , toForm progress
-          |> move (0, gameHeight/2 - 40)
+          |> move (60 - halfWidth, halfHeight - 40)
       , toForm (if game.state == Play then spacer 1 1 else txt identity msg)
-          |> move (0, 40 - gameHeight/2)
+          |> move (0, 40 - halfHeight)
       ]
 
 
 
 -- SIGNALS
 
-main =
+init =
   Signal.map2 view Window.dimensions gameState
 
 
@@ -255,7 +284,7 @@ gameState =
 
 -- Returns a clock signal
 delta =
-  Signal.map inSeconds (fps 60)
+  Signal.map inSeconds (Time.fps fps)
 
 -- Creates an event stream from the keyboard inputs and the
 -- clock.
