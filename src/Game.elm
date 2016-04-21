@@ -1,5 +1,6 @@
 module Game where
 
+import AnimationFrame
 import Color exposing (..)
 import Graphics.Collage exposing (..)
 import Graphics.Element exposing (..)
@@ -18,9 +19,6 @@ import Debug
 radius : Float
 radius = halfWidth * 1.42
 obstacleThickness = 30
-
-fps : Int
-fps = 60   --TODO: Make movement independent from fps
 
 
 -- Type definitions
@@ -284,7 +282,7 @@ gameState =
 
 -- Returns a clock signal
 delta =
-  Signal.map inSeconds (Time.fps fps)
+  AnimationFrame.frame
 
 -- Creates an event stream from the keyboard inputs and the
 -- clock.
