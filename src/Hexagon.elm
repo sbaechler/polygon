@@ -1,6 +1,8 @@
 module Game where
 
 import AnimationFrame
+import Audio
+import Audio exposing (defaultTriggers)
 import Color exposing (..)
 import Graphics.Collage exposing (..)
 import Graphics.Element exposing (..)
@@ -59,6 +61,18 @@ defaultGame =
   , autoRotateSpeed = 0.0
   }
 
+
+propertiesHandler : Audio.Properties -> Maybe Audio.Action
+propertiesHandler properties = Nothing
+
+music : Signal (Audio.Event, Audio.Properties)
+music = Audio.audio { src = "music/music.mp3",
+                      triggers = defaultTriggers, -- {defaultTriggers | timeupdate = True},
+                      propertiesHandler = propertiesHandler,
+                      actions = Signal.map handleAudio gameState }
+
+
+
 -- UPDATE
 
 -- Game loop: Transition from one state to the next.
@@ -86,6 +100,13 @@ updateProgress {state,progress} =
     progress + 1
   else
     progress
+
+
+handleAudio : Game -> Audio.Action
+handleAudio game =
+    case game.state of
+        Play -> Audio.Play
+        Pause -> Audio.Pause
 
 
 updateAutoRotateAngle: Game -> Float
