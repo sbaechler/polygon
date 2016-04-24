@@ -92,7 +92,8 @@ updateAutoRotateAngle {autoRotateAngle, autoRotateSpeed} =
 
 updateAutoRotateSpeed: Game -> Float
 updateAutoRotateSpeed {progress, autoRotateSpeed} =
-  Debug.watch "autoRotateSpeed" <| 0.02 * sin (Debug.watch "φ" (toFloat progress * 0.005))
+  0.02 * sin (toFloat progress * 0.005 |> Debug.watch "φ")
+  |> Debug.watch "autoRotateSpeed"
 
 
 updatePlayerAngle: Float -> Int -> Float
@@ -101,9 +102,9 @@ updatePlayerAngle angle dir =
     newAngle = (angle + toFloat (dir * speed) * 0.032)
   in
     if newAngle < 0 then
-      newAngle + 2*pi
-    else if newAngle > 2*pi then
-      newAngle - 2*pi
+      newAngle + 2 * pi
+    else if newAngle > 2 * pi then
+      newAngle - 2 * pi
     else
       newAngle
 
@@ -127,7 +128,7 @@ speed = 4
 msg : String
 msg = "SPACE to start, &larr;&rarr; to move"
 
-
+txt : (Text.Text -> Text.Text) -> String -> Element
 txt f string =
   Text.fromString string
     |> Text.color uiColor
@@ -152,11 +153,11 @@ makePlayer player =
 trapezoid: Float -> Float -> Color -> Form
 trapezoid base height color =
   let
-    s = height/(tan (degrees 60))
+    s = height/(tan <| degrees 60)
   in
-    filled color (polygon [
+    filled color <| polygon [
       (-base/2, 0), (base/2, 0), (base/2-s, height), (-base/2+s, height)
-    ])
+    ]
 
 makeObstacle : Float -> Color -> Float -> Form
 makeObstacle radius color opening =
@@ -187,23 +188,22 @@ makeObstacles color progress =
     , makeObstacle radius3 color 2
     ]
 
-
 hexagonElement: Float -> Int -> List((Float, Float))
 hexagonElement r i =
-  Debug.watch "Element" [(0.0, 0.0),
-   (sin (degrees (toFloat (60 * i))) * r,
-    cos (degrees (toFloat (60 * i))) * r),
-   (sin (degrees (toFloat (60 * (i+1)))) * r,
-    cos (degrees (toFloat (60 * (i+1)))) * r)
-  ]
-
+  let
+    angle0 = 60 * i |> toFloat |> degrees
+    angle1 = 60 * (i+1) |> toFloat |> degrees
+  in
+    [(0.0, 0.0)
+    , (sin angle0 * r, cos angle0 * r)
+    , (sin angle1 * r, cos angle1 * r)
+    ]
 
 makeField: Colors -> Form
 makeField colors =
   let
-
     color i =
-      if i%2 == 0 then
+      if i % 2 == 0 then
         colors.dark
       else
         colors.medium
@@ -215,11 +215,11 @@ makeField colors =
   in
     group (map poly [0..5])
 
---- the polygon in the center: this is just decoration, so it has no own state
+-- the polygon in the center: this is just decoration, so it has no own state
 makeCenterHole : Colors -> Int -> List Form
 makeCenterHole colors progress =
   let
-    shape = ngon 6 (60 + 10 * (sin <| 0.2* toFloat progress))
+    shape = ngon 6 (60 + 10 * (0.2 * toFloat progress |> sin))
     line = solid colors.bright
   in
     [shape
@@ -246,7 +246,8 @@ view : (Int,Int) -> Game -> Element
 view (w, h) game =
   let
     progress =
-      txt (Text.height 50) <| toString game.progress
+      toString game.progress
+      |> txt (Text.height 50)
     colors = makeColors game.progress
 
   in
@@ -254,8 +255,8 @@ view (w, h) game =
     collage gameWidth gameHeight
       [ rect gameWidth gameHeight
           |> filled bgBlack
-      , group (append [
-        makeField colors
+      , group (append
+        [ makeField colors
         , makeObstacles colors.bright game.progress
         , makePlayer game.player
         ]
@@ -267,7 +268,6 @@ view (w, h) game =
       , toForm (if game.state == Play then spacer 1 1 else txt identity msg)
           |> move (0, 40 - halfHeight)
       ]
-
 
 
 -- SIGNALS
@@ -288,8 +288,8 @@ delta =
 -- clock.
 input : Signal Input
 input =
-  Signal.sampleOn delta <|
-    Signal.map3 Input
-      Keyboard.space
-      (Signal.map .x Keyboard.arrows)
-      delta
+  Signal.map3 Input
+    Keyboard.space
+    (Signal.map .x Keyboard.arrows)
+    delta
+  |> Signal.sampleOn delta
