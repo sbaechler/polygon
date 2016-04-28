@@ -71,6 +71,7 @@ update input game =
       autoRotateSpeed = updateAutoRotateSpeed game
   }
 
+
 updatePlayer: Input -> Game -> Player
 updatePlayer {dir} {player} =
   let
@@ -271,7 +272,7 @@ view (w, h) game =
 
 
 -- SIGNALS
-
+init: Signal Element
 init =
   Signal.map2 view Window.dimensions gameState
 
@@ -292,4 +293,5 @@ input =
     Keyboard.space
     (Signal.map .x Keyboard.arrows)
     delta
+  -- only update on a new frame
   |> Signal.sampleOn delta
