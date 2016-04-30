@@ -10,6 +10,7 @@ import Text
 import Time exposing ( .. )
 import Window
 import Debug
+import String exposing (padLeft)
 
 
 -- MODEL
@@ -243,11 +244,23 @@ makeColors progress =
 
 
 -- Render the game to the DOM.
+
+-- Create a clock that shows 1/100 seconds
+formatScore : Int -> String
+formatScore progress =
+  let
+    time = progress * 100 // 60
+    seconds = time // 100
+    centis = time % 100
+  in
+    padLeft 3 '0' (toString seconds) ++ "." ++ padLeft 2 '0' (toString centis)
+
+
 view : (Int,Int) -> Game -> Element
 view (w, h) game =
   let
     progress =
-      toString game.progress
+      formatScore game.progress
       |> txt (Text.height 50)
     colors = makeColors game.progress
 
@@ -265,15 +278,16 @@ view (w, h) game =
       )
       |> rotate game.autoRotateAngle
       , toForm progress
-          |> move (60 - halfWidth, halfHeight - 40)
+          |> move (100 - halfWidth, halfHeight - 40)
       , toForm (if game.state == Play then spacer 1 1 else txt identity msg)
           |> move (0, 40 - halfHeight)
       ]
 
 
 -- SIGNALS
-init: Signal Element
-init =
+
+main : Signal Element
+main =
   Signal.map2 view Window.dimensions gameState
 
 
