@@ -13,6 +13,7 @@ import Time exposing ( .. )
 import Window
 import Debug
 import String exposing (padLeft)
+import Music
 
 
 -- MODEL
@@ -36,6 +37,7 @@ type alias Game =
     progress : Int,
     start : Time,
     running: Time,
+    hasBass: Bool,
     autoRotateAngle: Float,
     autoRotateSpeed: Float
   }
@@ -60,6 +62,7 @@ defaultGame =
   , progress = 0
   , start = 0.0
   , running = 0.0
+  , hasBass = False
   , autoRotateAngle = 0.0
   , autoRotateSpeed = 0.0
   }
@@ -70,7 +73,7 @@ propertiesHandler properties = Nothing
 
 music : Signal (Audio.Event, Audio.Properties)
 music = Audio.audio { src = "music/music.mp3",
-                      triggers = defaultTriggers, -- {defaultTriggers | timeupdate = True},
+                      triggers = defaultTriggers,
                       propertiesHandler = propertiesHandler,
                       actions = Signal.map handleAudio gameState }
 
@@ -92,6 +95,7 @@ update (timestamp, input) game =
         progress = updateProgress game,
         start = start,
         running = running,
+        hasBass = Debug.watch "Bass" (Music.hasBass running),
         autoRotateAngle = updateAutoRotateAngle game,
         autoRotateSpeed = updateAutoRotateSpeed game
     }
