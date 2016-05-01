@@ -13,9 +13,7 @@ loopPoint = 188331
 
 hasBass : Time -> Bool
 hasBass time =
-  if time < 2000 then False
-  else if time < 10000 then True
-  else if time < 14760 then False
+  if time < 14760 then False
   else if time < 44313 then True
   else if time < 51668 then False
   else if time < 129193 then True
