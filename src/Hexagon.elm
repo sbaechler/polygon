@@ -23,6 +23,7 @@ import Music
 radius : Float
 radius = halfWidth * 1.42
 obstacleThickness = 30
+beat = 0.15  -- Bpm / 3600
 
 
 -- Type definitions
@@ -253,10 +254,11 @@ makeField colors =
     group (map poly [0..5])
 
 -- the polygon in the center: this is just decoration, so it has no own state
-makeCenterHole : Colors -> Int -> List Form
-makeCenterHole colors progress =
+makeCenterHole : Colors -> Game -> List Form
+makeCenterHole colors game =
   let
-    shape = ngon 6 (60 + 10 * (0.2 * toFloat progress |> sin))
+    bassAdd = if game.hasBass then 10.0 else  10.0 * (beat * toFloat game.progress |> sin)
+    shape = ngon 6 (60 + bassAdd)
     line = solid colors.bright
   in
     [shape
@@ -289,6 +291,14 @@ formatTime running =
   in
     padLeft 3 '0' (toString seconds) ++ "." ++ padLeft 2 '0' (toString centis)
 
+beatPulse : Game -> Form -> Form
+beatPulse game =
+  if game.hasBass then
+    scale (Debug.watch "scale" (1.10 + 0.10 * (beat * toFloat game.progress |> sin)))
+  else
+    identity
+
+
 
 view : (Int,Int) -> Game -> Element
 view (w, h) game =
@@ -308,9 +318,10 @@ view (w, h) game =
         , makeObstacles colors.bright game.progress
         , makePlayer game.player
         ]
-        (makeCenterHole colors game.progress)
+        (makeCenterHole colors game)
       )
       |> rotate game.autoRotateAngle
+      |> beatPulse game
       , toForm progress
           |> move (100 - halfWidth, halfHeight - 40)
       , toForm (if game.state == Play then spacer 1 1 else txt identity msg)
