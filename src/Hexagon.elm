@@ -34,6 +34,7 @@ type alias Game =
     player : Player,
     obstacles: List(Obstacle),
     progress : Int,
+    obstacleSpeed: Float,
     autoRotateAngle: Float,
     autoRotateSpeed: Float
   }
@@ -63,12 +64,12 @@ defaultGame =
   , player = Player (degrees 30)
   , obstacles = []
   , progress = 0
+  , obstacleSpeed = 0
   , autoRotateAngle = 0.0
   , autoRotateSpeed = 0.0
   }
 
-speed : Int
-speed = 4
+
 
 
 -- UPDATE
@@ -81,6 +82,7 @@ update input game =
       player = updatePlayer input game,
       obstacles = updateObstacles game,
       progress = updateProgress game,
+      obstacleSpeed = Debug.watch "obstacle speed" (1 + (toFloat game.progress)/1000) , 
       autoRotateAngle = updateAutoRotateAngle game,
       autoRotateSpeed = updateAutoRotateSpeed game
   }
@@ -122,16 +124,19 @@ updateState input game =
 
 updatePlayer: Input -> Game -> Player
 updatePlayer {dir} {player, state} =
-  let
-    newAngle = if state == NewGame then degrees 30 else 
-      Debug.watch "Player angle" (updatePlayerAngle player.angle -dir)
-  in
-    { player | angle = newAngle }
+  if state == Play then
+    let
+      newAngle = if state == NewGame then degrees 30 else 
+        Debug.watch "Player angle" (updatePlayerAngle player.angle -dir)
+    in
+      { player | angle = newAngle }
+  else
+    player
 
 updateObstacles: Game -> List(Obstacle)
 updateObstacles game =
   let
-    obstacleDistance = 200
+    obstacleDistance = 300
     partsFor index = 
       case index of
         0 -> [True, True, True, False, True, True]
@@ -141,7 +146,7 @@ updateObstacles game =
         _ -> [True, False, True, True, True, True]
     radiusFor index = 
       Debug.watch ("obstacle radius"++toString index) 
-      (obstacleThickness + toFloat ((iHalfWidth + ( obstacleDistance * index) - game.progress * speed) % 1000))
+      toFloat (obstacleThickness + (iHalfWidth + round (( obstacleDistance * (toFloat index)) - (toFloat game.progress) * game.obstacleSpeed)) % (obstacleDistance * 5))
   in
    [
       {parts = partsFor 0, radius = radiusFor 0}
@@ -173,7 +178,7 @@ updateAutoRotateSpeed {progress, autoRotateSpeed} =
 updatePlayerAngle: Float -> Int -> Float
 updatePlayerAngle angle dir =
   let
-    newAngle = (angle + toFloat (dir * speed) * 0.032)
+    newAngle = (angle + toFloat (dir * 4) * 0.032)
   in
     if newAngle < 0 then
       newAngle + 2 * pi
