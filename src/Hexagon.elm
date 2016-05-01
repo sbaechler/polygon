@@ -34,6 +34,8 @@ type alias Game =
   { state: State,
     player : Player,
     progress : Int,
+    start : Time,
+    running: Time,
     autoRotateAngle: Float,
     autoRotateSpeed: Float
   }
@@ -41,7 +43,6 @@ type alias Game =
 type alias Input =
   { space : Bool
   , dir : Int
-  , delta : Time.Time
   }
 
 type alias Colors =
@@ -57,6 +58,8 @@ defaultGame =
   { state = Pause
   , player = Player 0.0
   , progress = 0
+  , start = 0.0
+  , running = 0.0
   , autoRotateAngle = 0.0
   , autoRotateSpeed = 0.0
   }
@@ -76,15 +79,22 @@ music = Audio.audio { src = "music/music.mp3",
 -- UPDATE
 
 -- Game loop: Transition from one state to the next.
-update : Input -> Game -> Game
-update input game =
-  { game |
-      state = if input.space then Play else game.state,
-      player = updatePlayer input game,
-      progress = updateProgress game,
-      autoRotateAngle = updateAutoRotateAngle game,
-      autoRotateSpeed = updateAutoRotateSpeed game
-  }
+update : (Time, Input) -> Game -> Game
+update (timestamp, input) game =
+  let
+    state = if input.space then Play else game.state
+    start = if input.space then timestamp else game.start
+    running = if state == Play then (timestamp - start) else 0.0
+  in
+    { game |
+        state = state,
+        player = updatePlayer input game,
+        progress = updateProgress game,
+        start = start,
+        running = running,
+        autoRotateAngle = updateAutoRotateAngle game,
+        autoRotateSpeed = updateAutoRotateSpeed game
+    }
 
 
 updatePlayer: Input -> Game -> Player
@@ -266,13 +276,12 @@ makeColors progress =
 
 -- Render the game to the DOM.
 
--- Create a clock that shows 1/100 seconds
-formatScore : Int -> String
-formatScore progress =
+formatTime : Time -> String
+formatTime running =
   let
-    time = progress * 100 // 60
-    seconds = time // 100
-    centis = time % 100
+    centiseconds = floor (Time.inMilliseconds running / 10)
+    seconds = centiseconds // 100
+    centis = centiseconds % 100
   in
     padLeft 3 '0' (toString seconds) ++ "." ++ padLeft 2 '0' (toString centis)
 
@@ -281,7 +290,7 @@ view : (Int,Int) -> Game -> Element
 view (w, h) game =
   let
     progress =
-      formatScore game.progress
+      formatTime game.running
       |> txt (Text.height 50)
     colors = makeColors game.progress
 
@@ -316,17 +325,14 @@ gameState : Signal Game
 gameState =
   Signal.foldp update defaultGame input
 
--- Returns a clock signal
-delta =
-  AnimationFrame.frame
 
--- Creates an event stream from the keyboard inputs and the
--- clock.
-input : Signal Input
+-- Creates an event stream from the keyboard inputs and is
+-- updated by AnimationFrame.
+input : Signal (Time, Input)
 input =
-  Signal.map3 Input
+  Signal.map2 Input
     Keyboard.space
     (Signal.map .x Keyboard.arrows)
-    delta
   -- only update on a new frame
-  |> Signal.sampleOn delta
+  |> Signal.sampleOn AnimationFrame.frame
+  |> Time.timestamp
