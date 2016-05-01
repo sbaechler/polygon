@@ -11,6 +11,7 @@ import Time exposing ( .. )
 import Window
 import Debug
 import String exposing (padLeft)
+import Random
 
 
 -- MODEL
@@ -23,7 +24,7 @@ obstacleThickness = 30
 
 
 -- Type definitions
-type State = Play | Pause
+type State = NewGame | Play | Pause | GameOver
 
 type alias Player =
   { angle: Float }
@@ -58,8 +59,8 @@ type alias Colors =
 -- The global game state
 defaultGame : Game
 defaultGame =
-  { state = Pause
-  , player = Player 0.0
+  { state = NewGame
+  , player = Player (degrees 30)
   , obstacles = []
   , progress = 0
   , autoRotateAngle = 0.0
@@ -76,7 +77,7 @@ speed = 4
 update : Input -> Game -> Game
 update input game =
   { game |
-      state = if input.space then Play else game.state,
+      state = updateState input game,
       player = updatePlayer input game,
       obstacles = updateObstacles game,
       progress = updateProgress game,
@@ -84,33 +85,80 @@ update input game =
       autoRotateSpeed = updateAutoRotateSpeed game
   }
 
+colidesWith: Player -> Obstacle -> Bool
+colidesWith player obstacle =
+  let 
+    collidesAtIndex: Int -> Bool
+    collidesAtIndex index = 
+      let 
+        fromAngle = Debug.watch ("from Angle"++toString index) ((toFloat index) * 60) 
+
+        toAngle = Debug.watch ("to Angle"++ toString index) (((toFloat index)+1)*60)
+        playerDegrees = Debug.watch "player degrees" (player.angle * 360 / (2*pi))
+      in
+        playerDegrees >= fromAngle && playerDegrees < toAngle
+  in
+    if obstacle.radius > playerRadius || obstacle.radius + obstacleThickness < playerRadius then
+      False
+    else
+      -- check if open
+
+        indexedMap (,) obstacle.parts |> filter snd |> map fst |> any collidesAtIndex
+
+
+isGameOver: Game -> Bool
+isGameOver {player, obstacles} =
+  any (colidesWith player) obstacles
+
+updateState: Input -> Game -> State
+updateState input game =
+  case game.state of
+    NewGame -> if input.space then Play else Pause
+    Play -> 
+      if input.space then Pause else 
+        if isGameOver game then GameOver else Play
+    Pause -> if input.space then Play else Pause
+    GameOver -> if input.space then NewGame else GameOver
 
 updatePlayer: Input -> Game -> Player
 updatePlayer {dir} {player} =
   let
     newAngle =  Debug.watch "Player angle" (updatePlayerAngle player.angle -dir)
+
   in
     { player | angle = newAngle }
 
 updateObstacles: Game -> List(Obstacle)
 updateObstacles game =
-  let 
-    radius offset = obstacleThickness + toFloat ((iHalfWidth + offset - game.progress * speed) % iHalfWidth)
+  let
+    obstacleDistance = 200
+    partsFor index = 
+      case index of
+        0 -> [True, True, True, False, True, True]
+        1 -> [True, True, True, False, True, True]
+        2 -> [False, True, False, True, True, True]
+        3 -> [False, True, True, True, True, True]
+        _ -> [True, False, True, True, True, True]
+    radiusFor index = 
+      Debug.watch ("obstacle radius"++toString index) 
+      (obstacleThickness + toFloat ((iHalfWidth + ( obstacleDistance * index) - game.progress * speed) % 1000))
   in
    [
-      {parts = [False, True, False, True, True, True], radius = radius 0}
-    , {parts = [True, False, True, False, True, True], radius = radius 150}
-    , {parts = [True, True, False, True, True, False], radius = radius 300}
+      {parts = partsFor 0, radius = radiusFor 0}
+    , {parts = partsFor 1, radius = radiusFor 1}
+    , {parts = partsFor 2, radius = radiusFor 2}
+    , {parts = partsFor 3, radius = radiusFor 3}
+    , {parts = partsFor 4, radius = radiusFor 4}
     ]
 
 
 updateProgress: Game -> Int
 updateProgress {state,progress} =
-  if state == Play then
-    progress + 1
-  else
-    progress
-
+  case state of
+    NewGame -> 0
+    Play -> progress + 1
+    Pause -> progress
+    GameOver -> progress
 
 updateAutoRotateAngle: Game -> Float
 updateAutoRotateAngle {autoRotateAngle, autoRotateSpeed} =
@@ -167,10 +215,14 @@ moveRadial angle radius =
 
 makePlayer : Player -> Form
 makePlayer player =
-  ngon 3 10
-    |> filled (hsl player.angle 1 0.5)
-    |> moveRadial player.angle (playerRadius - 10)
-    |> rotate player.angle
+  let 
+    angle = player.angle - degrees 30
+  in
+    ngon 3 10
+      |> filled (hsl angle 1 0.5)
+      |> moveRadial angle (playerRadius - 10)
+      |> rotate angle
+
 
 
 
@@ -188,12 +240,12 @@ trapezoid base height color =
 makeObstacle : Color -> Obstacle -> Form
 makeObstacle color obstacle =
   let
-    base = 2.0 * obstacle.radius / (sqrt 3)
+    base = 2.0 * (obstacle.radius +obstacleThickness) / (sqrt 3)
     makeObstaclePart : Int -> Form
     makeObstaclePart index = 
       trapezoid base obstacleThickness color 
-        |> rotate (degrees <| toFloat (90 + index *60)) 
-        |> moveRadial (degrees <| toFloat (index * 60)) obstacle.radius
+        |> rotate (degrees <| toFloat (90 + index * 60)) 
+        |> moveRadial (degrees <| toFloat (index * 60)) (obstacle.radius +obstacleThickness)
 
     -- color = (hsl (radius/100) 1 0.5)
   in
@@ -230,6 +282,7 @@ makeField colors =
       polygon (hexagonElement radius i)
       |> filled (color i)
 
+
   in
     group (map poly [0..5])
 
@@ -262,8 +315,8 @@ makeColors progress =
 -- Render the game to the DOM.
 
 -- Create a clock that shows 1/100 seconds
-formatScore : Int -> String
-formatScore progress =
+formatScore : Game -> String
+formatScore {state, progress} =
   let
     time = progress * 100 // 60
     seconds = time // 100
@@ -275,10 +328,15 @@ formatScore progress =
 view : (Int,Int) -> Game -> Element
 view (w, h) game =
   let
-    progress =
-      formatScore game.progress
+    score =
+      formatScore game
       |> txt (Text.height 50)
     colors = makeColors game.progress
+    message = txt (Text.height 50) <| 
+      case game.state of
+        GameOver -> "Game Over"
+        Pause -> "Pause"
+        _ -> ""
 
   in
     container w h middle <|
@@ -293,8 +351,10 @@ view (w, h) game =
         (makeCenterHole colors game.progress)
       )
       |> rotate game.autoRotateAngle
-      , toForm progress
+      , toForm score
           |> move (100 - halfWidth, halfHeight - 40)
+      , toForm message 
+          |> move (0, 40)
       , toForm (if game.state == Play then spacer 1 1 else txt identity msg)
           |> move (0, 40 - halfHeight)
       ]
