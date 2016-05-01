@@ -31,9 +31,15 @@ type alias Player =
 type alias Game =
   { state: State,
     player : Player,
+    obstacles: List(Obstacle),
     progress : Int,
     autoRotateAngle: Float,
     autoRotateSpeed: Float
+  }
+
+type alias Obstacle = 
+  { radius: Float
+  , parts: List(Bool)
   }
 
 type alias Input =
@@ -54,10 +60,15 @@ defaultGame : Game
 defaultGame =
   { state = Pause
   , player = Player 0.0
+  , obstacles = []
   , progress = 0
   , autoRotateAngle = 0.0
   , autoRotateSpeed = 0.0
   }
+
+speed : Int
+speed = 4
+
 
 -- UPDATE
 
@@ -67,6 +78,7 @@ update input game =
   { game |
       state = if input.space then Play else game.state,
       player = updatePlayer input game,
+      obstacles = updateObstacles game,
       progress = updateProgress game,
       autoRotateAngle = updateAutoRotateAngle game,
       autoRotateSpeed = updateAutoRotateSpeed game
@@ -79,6 +91,18 @@ updatePlayer {dir} {player} =
     newAngle =  Debug.watch "Player angle" (updatePlayerAngle player.angle -dir)
   in
     { player | angle = newAngle }
+
+updateObstacles: Game -> List(Obstacle)
+updateObstacles game =
+  let 
+    radius offset = obstacleThickness + toFloat ((iHalfWidth + offset - game.progress * speed) % iHalfWidth)
+  in
+   [
+      {parts = [False, True, False, True, True, True], radius = radius 0}
+    , {parts = [True, False, True, False, True, True], radius = radius 150}
+    , {parts = [True, True, False, True, True, False], radius = radius 300}
+    ]
+
 
 updateProgress: Game -> Int
 updateProgress {state,progress} =
@@ -124,8 +148,6 @@ uiColor =
 playerRadius : Float
 playerRadius = gameWidth / 10.0
 
-speed : Int
-speed = 4
 
 msg : String
 msg = "SPACE to start, &larr;&rarr; to move"
@@ -161,34 +183,28 @@ trapezoid base height color =
       (-base/2, 0), (base/2, 0), (base/2-s, height), (-base/2+s, height)
     ]
 
-makeObstacle : Float -> Color -> Float -> Form
-makeObstacle radius color opening =
+
+
+makeObstacle : Color -> Obstacle -> Form
+makeObstacle color obstacle =
   let
-    base = 2.0 * radius / (sqrt 3)
+    base = 2.0 * obstacle.radius / (sqrt 3)
+    makeObstaclePart : Int -> Form
+    makeObstaclePart index = 
+      trapezoid base obstacleThickness color 
+        |> rotate (degrees <| toFloat (90 + index *60)) 
+        |> moveRadial (degrees <| toFloat (index * 60)) obstacle.radius
 
     -- color = (hsl (radius/100) 1 0.5)
   in
     group
-      [ (trapezoid base obstacleThickness color) |> rotate (degrees 90) |> moveRadial (degrees 0) radius
-      , (trapezoid base obstacleThickness color) |> rotate (degrees 150) |> moveRadial (degrees 60) radius
-      , (trapezoid base obstacleThickness color) |> rotate (degrees 210) |> moveRadial (degrees 120) radius
-      , (trapezoid base obstacleThickness color) |> rotate (degrees 270) |> moveRadial (degrees 180) radius
-      , (trapezoid base obstacleThickness color) |> rotate (degrees 330) |> moveRadial (degrees 240) radius
-      --, (trapezoid base 20) |> rotate (degrees 30) |> moveRadial (degrees 300) radius
-      ] |> rotate (degrees opening * 60)
+      (indexedMap (,) obstacle.parts |> filter snd |> map fst |> map makeObstaclePart)
 
-makeObstacles : Color -> Int -> Form
-makeObstacles color progress =
-  let
-    radius1 = Debug.watch "obstacleradius" (obstacleThickness + toFloat ((iHalfWidth - progress * speed) % iHalfWidth))
-    radius2 = Debug.watch "obstacleradius2" (obstacleThickness + toFloat ((iHalfWidth + 150 - progress * speed) % iHalfWidth))
-    radius3 = Debug.watch "obstacleradius3" (obstacleThickness + toFloat ((iHalfWidth + 300 - progress * speed) % iHalfWidth))
-  in
-    group
-    [ makeObstacle radius1 color 0
-    , makeObstacle radius2 color 1
-    , makeObstacle radius3 color 2
-    ]
+makeObstacles : Color -> List(Obstacle) -> List(Form)
+makeObstacles color obstacles =
+  map (makeObstacle color) obstacles 
+
+
 
 hexagonElement: Float -> Int -> List((Float, Float))
 hexagonElement r i =
@@ -271,7 +287,7 @@ view (w, h) game =
           |> filled bgBlack
       , group (append
         [ makeField colors
-        , makeObstacles colors.bright game.progress
+        , group <| makeObstacles colors.bright game.obstacles
         , makePlayer game.player
         ]
         (makeCenterHole colors game.progress)
