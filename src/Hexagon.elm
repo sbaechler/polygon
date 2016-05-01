@@ -21,7 +21,7 @@ import Music
 (halfWidth, halfHeight) = (gameWidth/2, gameHeight/2)
 (iHalfWidth, iHalfHeight) = (gameWidth//2, gameHeight//2)
 radius : Float
-radius = halfWidth * 1.42
+radius = halfWidth * sqrt 2
 obstacleThickness = 30
 
 beat = 120.0 |> bpm
@@ -102,7 +102,11 @@ update : (Time, Input) -> Game -> Game
 update (timestamp, input) game =
   let
     start = if input.space then timestamp else game.start
-    running = if game.state == Play then (timestamp - start) else 0.0
+    running =
+      case game.state of
+        Play -> (timestamp - start)
+        GameOver -> game.running
+        _ -> 0.0
   in
     { game |
         state = updateState input game,
@@ -366,10 +370,9 @@ formatTime running =
 beatPulse : Game -> Form -> Form
 beatPulse game =
   if game.hasBass then
-    scale (Debug.watch "scale" (1.10 + 0.10 * (beat * toFloat game.progress |> sin)))
+    scale (1.10 + 0.10 * (beat * toFloat game.progress |> sin))
   else
     identity
-
 
 
 view : (Int,Int) -> Game -> Element
