@@ -121,10 +121,10 @@ updateState input game =
     GameOver -> if input.space then NewGame else GameOver
 
 updatePlayer: Input -> Game -> Player
-updatePlayer {dir} {player} =
+updatePlayer {dir} {player, state} =
   let
-    newAngle =  Debug.watch "Player angle" (updatePlayerAngle player.angle -dir)
-
+    newAngle = if state == NewGame then degrees 30 else 
+      Debug.watch "Player angle" (updatePlayerAngle player.angle -dir)
   in
     { player | angle = newAngle }
 
