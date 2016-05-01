@@ -23,8 +23,13 @@ import Music
 radius : Float
 radius = halfWidth * 1.42
 obstacleThickness = 30
-beat = 0.15  -- Bpm / 3600
 
+beat = 120.0 |> bpm
+
+-- Calculate Beat Per Minute
+bpm : Float -> Float
+bpm beat =
+  (2.0 * pi * beat / 3600 )
 
 -- Type definitions
 type State = Play | Pause
