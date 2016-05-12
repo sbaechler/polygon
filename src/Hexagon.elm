@@ -82,7 +82,7 @@ update input game =
       player = updatePlayer input game,
       obstacles = updateObstacles game,
       progress = updateProgress game,
-      obstacleSpeed = Debug.watch "obstacle speed" (1 + (toFloat game.progress)/1000) , 
+      obstacleSpeed = Debug.watch "obstacle speed" (1.5 + (toFloat game.progress)/1000) , 
       autoRotateAngle = updateAutoRotateAngle game,
       autoRotateSpeed = updateAutoRotateSpeed game
   }
