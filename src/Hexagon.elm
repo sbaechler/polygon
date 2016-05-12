@@ -32,7 +32,7 @@ bpm beat =
   (2.0 * pi * beat / 3600 )
 
 -- Type definitions
-type State = NewGame | Play | Pause | GameOver
+type State = NewGame | Starting | Play | Pause | GameOver
 
 type alias Player =
   { angle: Float }
@@ -149,7 +149,8 @@ isGameOver {player, obstacles} =
 updateState: Input -> Game -> State
 updateState input game =
   case game.state of
-    NewGame -> if input.space then Play else Pause
+    Starting -> Play
+    NewGame -> if input.space then Starting else Pause
     Play -> 
       if input.space then Pause else 
         if isGameOver game then GameOver else Play
@@ -193,13 +194,13 @@ updateProgress {state,progress} =
   case state of
     NewGame -> 0
     Play -> progress + 1
-    Pause -> progress
-    GameOver -> progress
+    _ -> progress
 
 handleAudio : Game -> Audio.Action
 handleAudio game =
     case game.state of
         Play -> Audio.Play
+        GameOver -> Audio.Seek 0
         _ -> Audio.Pause
 
 
