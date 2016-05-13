@@ -25,6 +25,7 @@ radius = halfWidth * sqrt 2
 obstacleThickness = 30
 
 beat = 120.0 |> bpm
+beatAmplitude = 0.06
 
 -- Calculate Beat Per Minute
 bpm : Float -> Float
@@ -109,7 +110,7 @@ update (timestamp, input) game =
         Play -> (timestamp - start)
         GameOver -> game.running
         _ -> 0.0
-    obstacleSpeed = Debug.watch "obstacle speed" (1.5 + (toFloat game.progress)/1000)
+    obstacleSpeed = Debug.watch "obstacle speed" (2 + (toFloat game.progress)/1000)
   in
     { game |
         state = updateState input game,
@@ -206,7 +207,7 @@ handleAudio : Game -> Audio.Action
 handleAudio game =
     case game.state of
         Play -> Audio.Play
-        GameOver -> Audio.Seek 0
+        Starting -> Audio.Seek 0
         _ -> Audio.Pause
 
 
@@ -340,7 +341,7 @@ makeField colors =
 makeCenterHole : Colors -> Game -> List Form
 makeCenterHole colors game =
   let
-    bassAdd = if game.hasBass then 10.0 else  10.0 * (beat * toFloat game.progress |> sin)
+    bassAdd = if game.hasBass then 100.0 * beatAmplitude else 100.0 * beatAmplitude * (beat * toFloat game.progress |> sin)
     shape = ngon 6 (60 + bassAdd)
     line = solid colors.bright
   in
@@ -377,7 +378,7 @@ formatTime running =
 beatPulse : Game -> Form -> Form
 beatPulse game =
   if game.hasBass then
-    scale (1.10 + 0.10 * (beat * toFloat game.progress |> sin))
+    scale (1 + beatAmplitude * (beat * toFloat game.progress |> sin))
   else
     identity
 
