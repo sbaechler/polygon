@@ -2,7 +2,6 @@
   "version": "1.0.0",
   "summary": "A functional reactive implementation of Terry Cavanagh's game Hexagon in Elm",
   "repository": "https://github.com/sbaechler/polygon.git",
-  "license": "BSD3",
   "source-directories": [
     "src",
     "../elm-audio"

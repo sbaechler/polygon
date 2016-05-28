@@ -51,7 +51,7 @@ type alias Game =
     autoRotateSpeed: Float
   }
 
-type alias Obstacle = 
+type alias Obstacle =
   { radius: Float
   , parts: List(Bool)
   }
@@ -127,11 +127,11 @@ update (timestamp, input) game =
 
 colidesWith: Player -> Obstacle -> Bool
 colidesWith player obstacle =
-  let 
+  let
     collidesAtIndex: Int -> Bool
-    collidesAtIndex index = 
-      let 
-        fromAngle = Debug.watch ("from Angle"++toString index) ((toFloat index) * 60) 
+    collidesAtIndex index =
+      let
+        fromAngle = Debug.watch ("from Angle"++toString index) ((toFloat index) * 60)
 
         toAngle = Debug.watch ("to Angle"++ toString index) (((toFloat index)+1)*60)
         playerDegrees = Debug.watch "player degrees" (player.angle * 360 / (2*pi))
@@ -155,8 +155,8 @@ updateState input game =
   case game.state of
     Starting -> Play
     NewGame -> if input.space then Starting else Pause
-    Play -> 
-      if input.space then Pause else 
+    Play ->
+      if input.space then Pause else
         if isGameOver game then GameOver else Play
     Pause -> if input.space then Play else Pause
     GameOver -> if input.space then NewGame else GameOver
@@ -165,7 +165,7 @@ updatePlayer: Input -> Game -> Player
 updatePlayer {dir} {player, state} =
   if state == Play then
     let
-      newAngle = if state == NewGame then degrees 30 else 
+      newAngle = if state == NewGame then degrees 30 else
         Debug.watch "Player angle" (updatePlayerAngle player.angle -dir)
     in
       { player | angle = newAngle }
@@ -176,15 +176,15 @@ updateObstacles: Game -> List(Obstacle)
 updateObstacles game =
   let
     obstacleDistance = 300
-    partsFor index = 
+    partsFor index =
       case index of
         0 -> [True, True, True, False, True, True]
         1 -> [True, True, True, False, True, True]
         2 -> [False, True, False, True, True, True]
         3 -> [False, True, True, True, True, True]
         _ -> [True, False, True, True, True, True]
-    radiusFor index = 
-      Debug.watch ("obstacle radius"++toString index) 
+    radiusFor index =
+      Debug.watch ("obstacle radius"++toString index)
       toFloat (obstacleThickness + (iHalfWidth + round (( obstacleDistance * (toFloat index)) - (toFloat game.progress) * game.obstacleSpeed)) % (obstacleDistance * 5))
   in
    [
@@ -266,7 +266,7 @@ moveRadial angle radius =
 
 makePlayer : Player -> Form
 makePlayer player =
-  let 
+  let
     angle = player.angle - degrees 30
   in
     ngon 3 10
@@ -293,9 +293,9 @@ makeObstacle color obstacle =
   let
     base = 2.0 * (obstacle.radius +obstacleThickness) / (sqrt 3)
     makeObstaclePart : Int -> Form
-    makeObstaclePart index = 
-      trapezoid base obstacleThickness color 
-        |> rotate (degrees <| toFloat (90 + index * 60)) 
+    makeObstaclePart index =
+      trapezoid base obstacleThickness color
+        |> rotate (degrees <| toFloat (90 + index * 60))
         |> moveRadial (degrees <| toFloat (index * 60)) (obstacle.radius +obstacleThickness)
 
     -- color = (hsl (radius/100) 1 0.5)
@@ -305,7 +305,7 @@ makeObstacle color obstacle =
 
 makeObstacles : Color -> List(Obstacle) -> List(Form)
 makeObstacles color obstacles =
-  map (makeObstacle color) obstacles 
+  map (makeObstacle color) obstacles
 
 
 
@@ -390,7 +390,7 @@ view (w, h) game =
       formatTime game.running
       |> txt (Text.height 50)
     colors = makeColors game.progress
-    message = txt (Text.height 50) <| 
+    message = txt (Text.height 50) <|
       case game.state of
         GameOver -> "Game Over"
         Pause -> "Pause"
@@ -412,7 +412,7 @@ view (w, h) game =
       |> beatPulse game
       , toForm progress
           |> move (100 - halfWidth, halfHeight - 40)
-      , toForm message 
+      , toForm message
           |> move (0, 40)
       , toForm (if game.state == Play then spacer 1 1 else txt identity msg)
           |> move (0, 40 - halfHeight)
