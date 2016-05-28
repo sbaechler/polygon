@@ -19,7 +19,7 @@ type State = NewGame | Starting | Play | Pause | GameOver
 type alias Player =
   { angle: Float }
 
-type alias Enemy = 
+type alias Enemy =
   { radius : Float
   , parts : List(Bool)
   }
@@ -31,7 +31,7 @@ type alias Input =
 
 
 type alias Game =
-  { 
+  {
     player : Player
   , enemies: List(Enemy)
   , enemySpeed: Float
@@ -55,12 +55,19 @@ type alias Colors =
 (halfWidth, halfHeight) = (gameWidth/2, gameHeight/2)
 (iHalfWidth, iHalfHeight) = (gameWidth//2, gameHeight//2)
 
+bgBlack : Color
+bgBlack =
+  rgb 20 20 20
+
 playerRadius : Float
 playerRadius = gameWidth / 10.0
 
+playerSpeed : Float
+playerSpeed = 0.128
+
 enemyThickness = 30
 
-beat = 120.0 |> bpm
+beat = 130.0 |> bpm
 beatAmplitude = 0.06
 
 -- Calculate Beat Per Minute
@@ -88,7 +95,7 @@ music = Audio.audio { src = "music/music.mp3",
 
 defaultGame : Game
 defaultGame =
-  { 
+  {
     player = Player (degrees 30)
   , enemies = []
   , enemySpeed = 0.0
@@ -107,7 +114,7 @@ defaultGame =
 updatePlayerAngle: Float -> Int -> Float
 updatePlayerAngle angle dir =
   let
-    newAngle = (angle + toFloat (-dir * 4) * 0.032)
+    newAngle = (angle + toFloat -dir * playerSpeed)
   in
     if newAngle < 0 then
       newAngle + 2 * pi
@@ -118,11 +125,11 @@ updatePlayerAngle angle dir =
 
 colidesWith: Player -> Enemy -> Bool
 colidesWith player enemy =
-  let 
+  let
     collidesAtIndex: Int -> Bool
-    collidesAtIndex index = 
-      let 
-        fromAngle = Debug.watch ("from Angle"++toString index) ((toFloat index) * 60) 
+    collidesAtIndex index =
+      let
+        fromAngle = Debug.watch ("from Angle"++toString index) ((toFloat index) * 60)
         toAngle = Debug.watch ("to Angle"++ toString index) (((toFloat index)+1)*60)
         playerDegrees = Debug.watch "player degrees" (player.angle * 360 / (2*pi))
       in
@@ -132,10 +139,7 @@ colidesWith player enemy =
       False
     else
       -- check if open
-
         indexedMap (,) enemy.parts |> filter snd |> map fst |> any collidesAtIndex
-
-
 
 isGameOver: Game -> Bool
 isGameOver {player, enemies} =
@@ -146,9 +150,10 @@ updateState input game =
   case game.state of
     Starting -> Play
     NewGame -> if input.space then Starting else Pause
-    Play -> 
-      if input.space then Pause else 
-        if isGameOver game then GameOver else Play
+    Play ->
+      if input.space then Pause
+      else if isGameOver game then GameOver
+      else Play
     Pause -> if input.space then Play else Pause
     GameOver -> if input.space then NewGame else GameOver
 
@@ -161,9 +166,9 @@ updateProgress {state,progress} =
     _ -> progress
 
 updateMsRunning: Time -> Game -> Time
-updateMsRunning timestamp game = 
+updateMsRunning timestamp game =
   case game.state of
-    Play -> game.msRunning + timestamp - game.timeTick 
+    Play -> game.msRunning + timestamp - game.timeTick
     NewGame -> 0.0
     _ -> game.msRunning
 
@@ -180,7 +185,7 @@ updatePlayer: Input -> Game -> Player
 updatePlayer {dir} {player, state} =
   if state == Play then
     let
-      newAngle = if state == NewGame then degrees 30 else 
+      newAngle = if state == NewGame then degrees 30 else
         Debug.watch "Player angle" (updatePlayerAngle player.angle dir)
     in
       { player | angle = newAngle }
@@ -191,15 +196,16 @@ updateEnemies: Game -> List(Enemy)
 updateEnemies game =
   let
     enemyDistance = 300
-    partsFor index = 
+    partsFor index =
       case index of
         0 -> [True, True, True, False, True, True]
         1 -> [True, True, True, False, True, True]
         2 -> [False, True, False, True, True, True]
         3 -> [False, True, True, True, True, True]
         _ -> [True, False, True, True, True, True]
-    radiusFor index = 
-      toFloat (enemyThickness + (iHalfWidth + round (( enemyDistance * (toFloat index)) - (toFloat game.progress) * game.enemySpeed)) % (enemyDistance * 5))
+    radiusFor index =
+      toFloat (enemyThickness + (iHalfWidth + round (( enemyDistance * (toFloat index))
+      - (toFloat game.progress) * game.enemySpeed)) % (enemyDistance * 5))
   in
    [
       {parts = partsFor 0, radius = radiusFor 0}
@@ -210,7 +216,7 @@ updateEnemies game =
     ]
 
 updateEnemySpeed: Game -> Float
-updateEnemySpeed game = 
+updateEnemySpeed game =
   Debug.watch "enemy speed" (2 + (toFloat game.progress)/1000)
 
 -- Game loop: Transition from one state to the next.
@@ -228,14 +234,10 @@ update (timestamp, input) game =
     , autoRotateAngle = updateAutoRotateAngle game
     , autoRotateSpeed = updateAutoRotateSpeed game
     , hasBass = Debug.watch "hasBass" (Music.hasBass game.msRunning)
-       
+
   }
 
 -- VIEW
-
-bgBlack : Color
-bgBlack =
-  rgb 20 20 20
 
 moveRadial : Float -> Float -> Form -> Form
 moveRadial angle radius =
@@ -243,7 +245,7 @@ moveRadial angle radius =
 
 makePlayer : Player -> Form
 makePlayer player =
-  let 
+  let
     angle = player.angle - degrees 30
   in
     ngon 3 10
@@ -266,9 +268,9 @@ makeEnemy color enemy =
   let
     base = 2.0 * (enemy.radius +enemyThickness) / (sqrt 3)
     makeEnemyPart : Int -> Form
-    makeEnemyPart index = 
-      trapezoid base enemyThickness color 
-        |> rotate (degrees <| toFloat (90 + index * 60)) 
+    makeEnemyPart index =
+      trapezoid base enemyThickness color
+        |> rotate (degrees <| toFloat (90 + index * 60))
         |> moveRadial (degrees <| toFloat (index * 60)) (enemy.radius +enemyThickness)
 
     -- color = (hsl (radius/100) 1 0.5)
@@ -278,7 +280,7 @@ makeEnemy color enemy =
 
 makeEnemies : Color -> List(Enemy) -> List(Form)
 makeEnemies color enemys =
-  map (makeEnemy color) enemys 
+  map (makeEnemy color) enemys
 
 
 
@@ -312,9 +314,9 @@ makeField colors =
 makeCenterHole : Colors -> Game -> List Form
 makeCenterHole colors game =
   let
-    bassAdd = if game.hasBass then 
-        100.0 * beatAmplitude 
-      else 
+    bassAdd = if game.hasBass then
+        100.0 * beatAmplitude
+      else
         100.0 * beatAmplitude * (beat * toFloat game.progress |> sin)
     shape = ngon 6 (60 + bassAdd)
     line = solid colors.bright
@@ -369,7 +371,7 @@ view (w, h) game =
     score =
       formatTime game.msRunning
       |> makeTextBox (Text.height 50)
-    message = makeTextBox (Text.height 50) <| 
+    message = makeTextBox (Text.height 50) <|
       case game.state of
         GameOver -> "Game Over"
         Pause -> "Pause"
@@ -388,7 +390,7 @@ view (w, h) game =
         )
         |> rotate game.autoRotateAngle
         |> beatPulse game
-      , toForm message 
+      , toForm message
         |> move (0, 40)
       , toForm score
           |> move (100 - halfWidth, halfHeight - 40)
@@ -417,4 +419,3 @@ input =
   -- only update on a new frame
   |> Signal.sampleOn AnimationFrame.frame
   |> Time.timestamp
-
