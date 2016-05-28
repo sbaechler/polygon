@@ -1,9 +1,6 @@
-module Game
-
-import AnimationFrame
 import Color exposing (..)
-import Graphics.Collage exposing (..)
-import Graphics.Element exposing (..)
+import Collage exposing (..)
+import Element exposing (..)
 import List exposing (..)
 import Keyboard
 import Text
@@ -378,7 +375,7 @@ gameState =
 
 -- Returns a clock signal
 delta =
-  AnimationFrame.frame
+  Time.fps 60
 
 -- Creates an event stream from the keyboard inputs and the
 -- clock.
