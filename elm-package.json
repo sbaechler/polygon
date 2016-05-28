@@ -2,8 +2,9 @@
     "version": "1.0.0",
     "summary": "A functional reactive implementation of Terry Cavanagh's game Hexagon in Elm",
     "repository": "https://github.com/sbaechler/polygon.git",
+    "license": "none",
     "source-directories": [
-        "src"
+          "src"
     ],
     "exposed-modules": [],
     "dependencies": {
