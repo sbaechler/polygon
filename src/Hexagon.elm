@@ -2,11 +2,11 @@ import Color exposing (..)
 import Collage exposing (..)
 import Element exposing (..)
 import List exposing (..)
-import Keyboard
+import Keyboard.Extra as Keyboard
 import Text
 import Time exposing ( .. )
 import Window
-import Debug
+import Debug exposing (log)
 import String exposing (padLeft)
 import Random
 
@@ -79,7 +79,7 @@ update input game =
       player = updatePlayer input game,
       obstacles = updateObstacles game,
       progress = updateProgress game,
-      obstacleSpeed = Debug.watch "obstacle speed" (1.5 + (toFloat game.progress)/1000) ,
+      obstacleSpeed = Debug.log "obstacle speed" (1.5 + (toFloat game.progress)/1000) ,
       autoRotateAngle = updateAutoRotateAngle game,
       autoRotateSpeed = updateAutoRotateSpeed game
   }
@@ -90,10 +90,10 @@ colidesWith player obstacle =
     collidesAtIndex: Int -> Bool
     collidesAtIndex index =
       let
-        fromAngle = Debug.watch ("from Angle"++toString index) ((toFloat index) * 60)
+        fromAngle = Debug.log ("from Angle"++toString index) ((toFloat index) * 60)
 
-        toAngle = Debug.watch ("to Angle"++ toString index) (((toFloat index)+1)*60)
-        playerDegrees = Debug.watch "player degrees" (player.angle * 360 / (2*pi))
+        toAngle = Debug.log ("to Angle"++ toString index) (((toFloat index)+1)*60)
+        playerDegrees = Debug.log "player degrees" (player.angle * 360 / (2*pi))
       in
         playerDegrees >= fromAngle && playerDegrees < toAngle
   in
@@ -124,7 +124,7 @@ updatePlayer {dir} {player, state} =
   if state == Play then
     let
       newAngle = if state == NewGame then degrees 30 else
-        Debug.watch "Player angle" (updatePlayerAngle player.angle -dir)
+        Debug.log "Player angle" (updatePlayerAngle player.angle -dir)
     in
       { player | angle = newAngle }
   else
@@ -142,7 +142,7 @@ updateObstacles game =
         3 -> [False, True, True, True, True, True]
         _ -> [True, False, True, True, True, True]
     radiusFor index =
-      Debug.watch ("obstacle radius"++toString index)
+      Debug.log ("obstacle radius"++toString index)
       toFloat (obstacleThickness + (iHalfWidth + round (( obstacleDistance * (toFloat index)) - (toFloat game.progress) * game.obstacleSpeed)) % (obstacleDistance * 5))
   in
    [
@@ -168,8 +168,8 @@ updateAutoRotateAngle {autoRotateAngle, autoRotateSpeed} =
 
 updateAutoRotateSpeed: Game -> Float
 updateAutoRotateSpeed {progress, autoRotateSpeed} =
-  0.02 * sin (toFloat progress * 0.005 |> Debug.watch "φ")
-  |> Debug.watch "autoRotateSpeed"
+  0.02 * sin (toFloat progress * 0.005 |> Debug.log "φ")
+  |> Debug.log "autoRotateSpeed"
 
 
 updatePlayerAngle: Float -> Int -> Float
