@@ -377,13 +377,13 @@ view (w, h) game =
         Pause -> "Pause"
         _ -> ""
     bg = rect gameWidth gameHeight |> filled bgBlack
-    field = group (append
-                   [ makeField colors
-                   , makePlayer game.player
-                   , group <| makeEnemies colors.bright game.enemies
-                   ]
-                   (makeCenterHole colors game)
-                  )
+    field = append
+              [ makeField colors
+              , makePlayer game.player
+              , group <| makeEnemies colors.bright game.enemies
+              ]
+              (makeCenterHole colors game)
+            |> group
   in
     container w h middle <|
     collage gameWidth gameHeight
