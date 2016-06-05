@@ -71,11 +71,15 @@ startMessage = "SPACE to start, &larr;&rarr; to move"
 
 beat = 130.0 |> bpm
 beatAmplitude = 0.06
+beatPhase = 180 |> degrees
 
 -- Calculate Beat Per Minute
 bpm : Float -> Float
 bpm beat =
   (2.0 * pi * beat / 3600 )
+
+pump : Int -> Float
+pump progress = beatAmplitude * (beat * toFloat progress + beatPhase |> sin)
 
 handleAudio : Game -> Audio.Action
 handleAudio game =
@@ -275,7 +279,6 @@ makeEnemy color enemy =
         |> rotate (degrees <| toFloat (90 + index * 60))
         |> moveRadial (degrees <| toFloat (index * 60)) (enemy.radius +enemyThickness)
 
-    -- color = (hsl (radius/100) 1 0.5)
   in
     group
       (indexedMap (,) enemy.parts |> filter snd |> map fst |> map makeEnemyPart)
@@ -319,7 +322,7 @@ makeCenterHole colors game =
     bassAdd = if game.hasBass then
         100.0 * beatAmplitude
       else
-        100.0 * beatAmplitude * (beat * toFloat game.progress |> sin)
+        100.0 * (pump game.progress)
     shape = ngon 6 (60 + bassAdd)
     line = solid colors.bright
   in
@@ -348,10 +351,11 @@ makeTextBox size string =
     |> Text.monospace
     |> Text.height size
     |> leftAligned
+
 beatPulse : Game -> Form -> Form
 beatPulse game =
   if game.hasBass then
-    scale (1 + beatAmplitude * (beat * toFloat game.progress |> sin))
+    scale (1 + (pump game.progress))
   else
     identity
 
