@@ -376,28 +376,27 @@ view (w, h) game =
         GameOver -> "Game Over"
         Pause -> "Pause"
         _ -> ""
+    bg = rect gameWidth gameHeight |> filled bgBlack
+    field = group (append
+                   [ makeField colors
+                   , makePlayer game.player
+                   , group <| makeEnemies colors.bright game.enemies
+                   ]
+                   (makeCenterHole colors game)
+                  )
   in
     container w h middle <|
     collage gameWidth gameHeight
-      [ rect gameWidth gameHeight
-          |> filled bgBlack
-        , group (append
-          [ makeField colors
-          , makePlayer game.player
-          , group <| makeEnemies colors.bright game.enemies
-          ]
-          (makeCenterHole colors game)
-        )
-        |> rotate game.autoRotateAngle
-        |> beatPulse game
-      , toForm message
-        |> move (0, 40)
-      , toForm score
-          |> move (100 - halfWidth, halfHeight - 40)
+      [ bg
+      , field |> rotate game.autoRotateAngle |> beatPulse game
+      , toForm message |> move (0, 40)
+      , toForm score |> move (100 - halfWidth, halfHeight - 40)
       , toForm (
-          if game.state == Play then spacer 1 1 else makeTextBox identity startMessage)
-          |> move (0, 40 - halfHeight)
-      ]
+          if game.state == Play then spacer 1 1
+          else makeTextBox identity startMessage
+        ) |> move (0, 40 - halfHeight)
+    ]
+
 
 -- SIGNALS
 
