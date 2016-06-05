@@ -67,6 +67,8 @@ playerSpeed = 0.128
 
 enemyThickness = 30
 
+startMessage = "SPACE to start, &larr;&rarr; to move"
+
 beat = 130.0 |> bpm
 beatAmplitude = 0.06
 
@@ -367,7 +369,6 @@ view : (Int,Int) -> Game -> Element
 view (w, h) game =
   let
     colors = makeColors game.progress
-    startMessage = "SPACE to start, &larr;&rarr; to move"
     score =
       formatTime game.msRunning
       |> makeTextBox (Text.height 50)
@@ -378,12 +379,12 @@ view (w, h) game =
         _ -> ""
     bg = rect gameWidth gameHeight |> filled bgBlack
     field = append
-              [ makeField colors
-              , makePlayer game.player
-              , group <| makeEnemies colors.bright game.enemies
-              ]
-              (makeCenterHole colors game)
-            |> group
+        [ makeField colors
+        , makePlayer game.player
+        , group <| makeEnemies colors.bright game.enemies
+        ]
+        (makeCenterHole colors game)
+      |> group
   in
     container w h middle <|
     collage gameWidth gameHeight
