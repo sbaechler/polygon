@@ -341,12 +341,12 @@ makeColors progress =
     , bright = (hsla hue 0.6 0.6 0.8)
     }
 
-makeTextBox : (Text.Text -> Text.Text) -> String -> Element
-makeTextBox f string =
+makeTextBox : Float -> String -> Element
+makeTextBox size string =
   Text.fromString string
     |> Text.color (rgb 255 255 255)
     |> Text.monospace
-    |> f
+    |> Text.height size
     |> leftAligned
 beatPulse : Game -> Form -> Form
 beatPulse game =
@@ -371,8 +371,8 @@ view (w, h) game =
     colors = makeColors game.progress
     score =
       formatTime game.msRunning
-      |> makeTextBox (Text.height 50)
-    message = makeTextBox (Text.height 50) <|
+      |> makeTextBox 50
+    message = makeTextBox 50 <|
       case game.state of
         GameOver -> "Game Over"
         Pause -> "Pause"
@@ -394,7 +394,7 @@ view (w, h) game =
       , toForm score |> move (100 - halfWidth, halfHeight - 40)
       , toForm (
           if game.state == Play then spacer 1 1
-          else makeTextBox identity startMessage
+          else makeTextBox 20 startMessage
         ) |> move (0, 40 - halfHeight)
     ]
 
