@@ -1,4 +1,3 @@
-module Game where
 import Time exposing (..)
 import List exposing (..)
 import AnimationFrame
@@ -13,8 +12,18 @@ import Audio
 import Music
 import String exposing (padLeft)
 
+import Random
+import Html
+import Html.App as App
+import Window exposing (Size)
+import AnimationFrame
+
+
 -- MODEL
 type State = NewGame | Starting | Play | Pause | GameOver
+
+type Msg =
+  Space | LeftArrow | RightArrow | Step
 
 type alias Player =
   { angle: Float }
@@ -369,8 +378,8 @@ formatTime running =
     padLeft 3 '0' (toString seconds) ++ "." ++ padLeft 2 '0' (toString centis)
 
 
-view : (Int,Int) -> Game -> Element
-view (w, h) game =
+view : Game -> Html.Html Input
+view game =
   let
     colors = makeColors game.progress
     score =
@@ -383,6 +392,14 @@ view (w, h) game =
         _ -> ""
     bg = rect gameWidth gameHeight |> filled bgBlack
     field = append
+
+  in
+    toHtml <|
+    container gameWidth gameHeight middle <|
+    collage gameWidth gameHeight
+      [ rect gameWidth gameHeight
+          |> filled bgBlack
+      , group (append
         [ makeField colors
         , makePlayer game.player
         , group <| makeEnemies colors.bright game.enemies
@@ -405,21 +422,48 @@ view (w, h) game =
 
 -- SIGNALS
 
-main : Signal Element
+subscriptions : Game -> Sub Msg
+subscriptions game =
+  Sub.batch
+    [ Keyboard.subscriptions,
+      AnimationFrame.diffs
+    ]
+
+
 main =
-  Signal.map2 view Window.dimensions gameState
+  App.program
+  { init = init
+  , update = update
+  , view = view
+  , subscriptions = subscriptions }
 
-gameState : Signal Game
-gameState =
-  Signal.foldp update defaultGame input
 
--- Creates an event stream from the keyboard inputs and is
--- updated by AnimationFrame.
-input : Signal (Time, Input)
-input =
-  Signal.map2 Input
-    Keyboard.space
-    (Signal.map .x Keyboard.arrows)
-  -- only update on a new frame
-  |> Signal.sampleOn AnimationFrame.frame
-  |> Time.timestamp
+
+
+
+
+-- SIGNALS
+--
+--main : Signal Element
+--main =
+--  Signal.map2 view Window.dimensions gameState
+--
+--
+--gameState : Signal Game
+--gameState =
+--  Signal.foldp update defaultGame input
+--
+---- Returns a clock signal
+--delta =
+--  Time.fps 60
+--
+---- Creates an event stream from the keyboard inputs and the
+---- clock.
+--input : Signal Input
+--input =
+--  Signal.map3 Input
+--    Keyboard.space
+--    (Signal.map .x Keyboard.arrows)
+--    delta
+--  -- only update on a new frame
+--  |> Signal.sampleOn delta
