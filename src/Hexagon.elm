@@ -242,11 +242,11 @@ update msg game =
             player = updatePlayer game.direction game
           , enemies = updateEnemies game
           , enemySpeed = updateEnemySpeed game
-          , state =  Debug.log "state" nextState
-          , progress = Debug.log "progress" (updateProgress game)
-          , timeStart = Debug.log "timeStart" (if game.state == NewGame then time else game.timeStart)
+          , state =  nextState
+          , progress = updateProgress game
+          , timeStart = if game.state == NewGame then time else game.timeStart
           , timeTick = time
-          , msRunning = Debug.log "msRunning" (updateMsRunning time game)
+          , msRunning = updateMsRunning time game
           , autoRotateAngle = updateAutoRotateAngle game
           , autoRotateSpeed = updateAutoRotateSpeed game
           -- , hasBass = Debug.log "hasBass" (Music.hasBass game.msRunning)
@@ -393,21 +393,26 @@ view game =
         _ -> ""
     bg = rect gameWidth gameHeight |> filled bgBlack
     field = append
+            [ makeField colors
+            , makePlayer game.player
+            , group <| makeEnemies colors.bright game.enemies
+            ]
+            (makeCenterHole colors game)
+          |> group
 
   in
     toHtml <|
     container gameWidth gameHeight middle <|
     collage gameWidth gameHeight
-      [ rect gameWidth gameHeight
-          |> filled bgBlack
-      , append
-        [ makeField colors
-        , makePlayer game.player
-        , group <| makeEnemies colors.bright game.enemies
-        ]
-        (makeCenterHole colors game)
-      |> group
-      ]
+      [ bg
+      , field |> rotate game.autoRotateAngle |> beatPulse game
+      , toForm message |> move (0, 40)
+      , toForm score |> move (100 - halfWidth, halfHeight - 40)
+      , toForm (
+          if game.state == Play then spacer 1 1
+          else makeTextBox 20 startMessage
+        ) |> move (0, 40 - halfHeight)
+    ]
 
 
 -- SUBSCRIPTIONS
