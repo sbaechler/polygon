@@ -24,9 +24,7 @@ type State = NewGame | Starting | Play | Pause | GameOver
 
 
 type Msg
-  = Init Time
-  | Step Time
-  | Spacebar
+  = Step Time
   | KeyboardExtraMsg Keyboard.Msg
 
 type alias Player =
@@ -251,7 +249,6 @@ update msg game =
           , autoRotateSpeed = updateAutoRotateSpeed game
           -- , hasBass = Debug.log "hasBass" (Music.hasBass game.msRunning)
         }, Cmd.none)
-    _ -> (game, Cmd.none)
 
 -- VIEW
 
@@ -296,7 +293,6 @@ makeEnemy color enemy =
 makeEnemies : Color -> List(Enemy) -> List(Form)
 makeEnemies color enemys =
   map (makeEnemy color) enemys
-
 
 
 hexagonElement: Int -> List((Float, Float))
@@ -430,7 +426,6 @@ subscriptions game =
   ]
 
 
-
 --INIT
 
 init : (Game, Cmd Msg)
@@ -462,32 +457,3 @@ main =
   , update = update
   , view = view
   , subscriptions = subscriptions }
-
-
-
-
--- SIGNALS
---
---main : Signal Element
---main =
---  Signal.map2 view Window.dimensions gameState
---
---
---gameState : Signal Game
---gameState =
---  Signal.foldp update defaultGame input
---
----- Returns a clock signal
---delta =
---  Time.fps 60
---
----- Creates an event stream from the keyboard inputs and the
----- clock.
---input : Signal Input
---input =
---  Signal.map3 Input
---    Keyboard.space
---    (Signal.map .x Keyboard.arrows)
---    delta
---  -- only update on a new frame
---  |> Signal.sampleOn delta
