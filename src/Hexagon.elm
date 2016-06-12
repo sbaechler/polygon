@@ -1,15 +1,15 @@
 import Time exposing (..)
 import List exposing (..)
 import AnimationFrame
-import Keyboard
+import Keyboard.Extra as Keyboard
 import Window
-import Graphics.Collage exposing (..)
-import Graphics.Element exposing (..)
+import Collage exposing (..)
+import Element exposing (..)
 import Color exposing (..)
 import Debug
 import Text
-import Audio
-import Music
+import Html
+import Html.App as App
 import String exposing (padLeft)
 
 import Random
@@ -22,8 +22,12 @@ import AnimationFrame
 -- MODEL
 type State = NewGame | Starting | Play | Pause | GameOver
 
-type Msg =
-  Space | LeftArrow | RightArrow | Step
+
+type Msg
+  = Init Time
+  | Step Time
+  | Spacebar
+  | KeyboardExtraMsg Keyboard.Msg
 
 type alias Player =
   { angle: Float }
@@ -31,11 +35,6 @@ type alias Player =
 type alias Enemy =
   { radius : Float
   , parts : List(Bool)
-  }
-
-type alias Input =
-  { space : Bool
-  , dir : Int
   }
 
 
@@ -51,6 +50,8 @@ type alias Game =
   , msRunning : Float
   , autoRotateAngle : Float
   , autoRotateSpeed : Float
+  , direction : Int
+  , keyboardModel : Keyboard.Model
   , hasBass : Bool
   }
 
@@ -90,39 +91,22 @@ bpm beat =
 pump : Int -> Float
 pump progress = beatAmplitude * (beat * toFloat progress + beatPhase |> sin)
 
-handleAudio : Game -> Audio.Action
-handleAudio game =
-  case game.state of
-    Play -> Audio.Play
-    Starting -> Audio.Seek 0
-    _ -> Audio.Pause
+--handleAudio : Game -> Audio.Action
+--handleAudio game =
+--  case game.state of
+--    Play -> Audio.Play
+--    Starting -> Audio.Seek 0
+--    _ -> Audio.Pause
+--
+--propertiesHandler : Audio.Properties -> Maybe Audio.Action
+--propertiesHandler properties = Nothing
+--
+--music : Signal (Audio.Event, Audio.Properties)
+--music = Audio.audio { src = "music/music.mp3",
+--                      triggers = Audio.defaultTriggers,
+--                      propertiesHandler = propertiesHandler,
+--                      actions = Signal.map handleAudio gameState }
 
-propertiesHandler : Audio.Properties -> Maybe Audio.Action
-propertiesHandler properties = Nothing
-
-music : Signal (Audio.Event, Audio.Properties)
-music = Audio.audio { src = "music/music.mp3",
-                      triggers = Audio.defaultTriggers,
-                      propertiesHandler = propertiesHandler,
-                      actions = Signal.map handleAudio gameState }
-
--- The global game state
-
-defaultGame : Game
-defaultGame =
-  {
-    player = Player (degrees 30)
-  , enemies = []
-  , enemySpeed = 0.0
-  , state = NewGame
-  , progress = 0
-  , timeStart = 0.0
-  , timeTick = 0.0
-  , msRunning = 0.0
-  , autoRotateAngle = 0.0
-  , autoRotateSpeed = 0.0
-  , hasBass = False
-  }
 
 -- UPDATE
 
@@ -144,9 +128,9 @@ colidesWith player enemy =
     collidesAtIndex: Int -> Bool
     collidesAtIndex index =
       let
-        fromAngle = Debug.watch ("from Angle"++toString index) ((toFloat index) * 60)
-        toAngle = Debug.watch ("to Angle"++ toString index) (((toFloat index)+1)*60)
-        playerDegrees = Debug.watch "player degrees" (player.angle * 360 / (2*pi))
+        fromAngle = Debug.log ("from Angle"++toString index) ((toFloat index) * 60)
+        toAngle = Debug.log ("to Angle"++ toString index) (((toFloat index)+1)*60)
+        playerDegrees = Debug.log "player degrees" (player.angle * 360 / (2*pi))
       in
         playerDegrees >= fromAngle && playerDegrees < toAngle
   in
@@ -159,18 +143,6 @@ colidesWith player enemy =
 isGameOver: Game -> Bool
 isGameOver {player, enemies} =
   any (colidesWith player) enemies
-
-updateState: Input -> Game -> State
-updateState input game =
-  case game.state of
-    Starting -> Play
-    NewGame -> if input.space then Starting else Pause
-    Play ->
-      if input.space then Pause
-      else if isGameOver game then GameOver
-      else Play
-    Pause -> if input.space then Play else Pause
-    GameOver -> if input.space then NewGame else GameOver
 
 
 updateProgress: Game -> Int
@@ -193,15 +165,15 @@ updateAutoRotateAngle {autoRotateAngle, autoRotateSpeed} =
 
 updateAutoRotateSpeed: Game -> Float
 updateAutoRotateSpeed {progress, autoRotateSpeed} =
-  0.02 * sin (toFloat progress * 0.005 |> Debug.watch "φ")
-  |> Debug.watch "autoRotateSpeed"
+  0.02 * sin (toFloat progress * 0.005 |> Debug.log "φ")
+  |> Debug.log "autoRotateSpeed"
 
-updatePlayer: Input -> Game -> Player
-updatePlayer {dir} {player, state} =
+updatePlayer: Int -> Game -> Player
+updatePlayer dir {player, state} =
   if state == Play then
     let
-      newAngle = if state == NewGame then degrees 30 else
-        Debug.watch "Player angle" (updatePlayerAngle player.angle dir)
+      newAngle = if state == NewGame then degrees 30
+                 else updatePlayerAngle player.angle dir
     in
       { player | angle = newAngle }
   else
@@ -232,25 +204,54 @@ updateEnemies game =
 
 updateEnemySpeed: Game -> Float
 updateEnemySpeed game =
-  Debug.watch "enemy speed" (2 + (toFloat game.progress)/1000)
+  Debug.log "enemy speed" (2 + (toFloat game.progress)/1000)
+
 
 -- Game loop: Transition from one state to the next.
-update : (Time, Input) -> Game -> Game
-update (timestamp, input) game =
-  { game |
-      player = updatePlayer input game
-    , enemies = updateEnemies game
-    , enemySpeed = updateEnemySpeed game
-    , state =  Debug.watch "state" (updateState input game)
-    , progress = Debug.watch "progress" (updateProgress game)
-    , timeStart = Debug.watch "timeStart" (if game.state == NewGame then timestamp else game.timeStart)
-    , timeTick = timestamp
-    , msRunning = Debug.watch "msRunning" (updateMsRunning timestamp game)
-    , autoRotateAngle = updateAutoRotateAngle game
-    , autoRotateSpeed = updateAutoRotateSpeed game
-    , hasBass = Debug.watch "hasBass" (Music.hasBass game.msRunning)
-
-  }
+update : Msg -> Game -> (Game, Cmd Msg)
+update msg game =
+  case msg of
+    KeyboardExtraMsg keyMsg ->
+      let
+        ( keyboardModel, keyboardCmd ) =
+          Keyboard.update keyMsg game.keyboardModel
+        spacebar = Keyboard.isPressed Keyboard.Space keyboardModel &&
+                not (Keyboard.isPressed Keyboard.Space game.keyboardModel)
+        nextState =
+          case game.state of
+            NewGame -> if spacebar then Starting else Pause
+            Play -> if spacebar then Pause else Play
+            Pause -> if spacebar then Play else Pause
+            GameOver -> if spacebar then NewGame else GameOver
+            _ -> game.state
+      in
+        ( { game | keyboardModel = keyboardModel
+                 , direction = (Keyboard.arrows keyboardModel).x
+                 , state = nextState
+          }
+        , Cmd.map KeyboardExtraMsg keyboardCmd )
+    Step time -> (
+      let
+        nextState =
+          case game.state of
+            Starting -> Play
+            Play -> if isGameOver game then GameOver else Play
+            _ -> game.state
+      in
+        { game |
+            player = updatePlayer game.direction game
+          , enemies = updateEnemies game
+          , enemySpeed = updateEnemySpeed game
+          , state =  Debug.log "state" nextState
+          , progress = Debug.log "progress" (updateProgress game)
+          , timeStart = Debug.log "timeStart" (if game.state == NewGame then time else game.timeStart)
+          , timeTick = time
+          , msRunning = Debug.log "msRunning" (updateMsRunning time game)
+          , autoRotateAngle = updateAutoRotateAngle game
+          , autoRotateSpeed = updateAutoRotateSpeed game
+          -- , hasBass = Debug.log "hasBass" (Music.hasBass game.msRunning)
+        }, Cmd.none)
+    _ -> (game, Cmd.none)
 
 -- VIEW
 
@@ -378,7 +379,7 @@ formatTime running =
     padLeft 3 '0' (toString seconds) ++ "." ++ padLeft 2 '0' (toString centis)
 
 
-view : Game -> Html.Html Input
+view : Game -> Html.Html Msg
 view game =
   let
     colors = makeColors game.progress
@@ -399,35 +400,55 @@ view game =
     collage gameWidth gameHeight
       [ rect gameWidth gameHeight
           |> filled bgBlack
-      , group (append
+      , append
         [ makeField colors
         , makePlayer game.player
         , group <| makeEnemies colors.bright game.enemies
         ]
         (makeCenterHole colors game)
       |> group
-  in
-    container w h middle <|
-    collage gameWidth gameHeight
-      [ bg
-      , field |> rotate game.autoRotateAngle |> beatPulse game
-      , toForm message |> move (0, 40)
-      , toForm score |> move (100 - halfWidth, halfHeight - 40)
-      , toForm (
-          if game.state == Play then spacer 1 1
-          else makeTextBox 20 startMessage
-        ) |> move (0, 40 - halfHeight)
-    ]
+      ]
 
 
--- SIGNALS
+-- SUBSCRIPTIONS
+
+step : Time -> Msg
+step time =
+  Step time
+
 
 subscriptions : Game -> Sub Msg
 subscriptions game =
-  Sub.batch
-    [ Keyboard.subscriptions,
-      AnimationFrame.diffs
-    ]
+  Sub.batch [
+    AnimationFrame.times step,
+    Sub.map KeyboardExtraMsg Keyboard.subscriptions
+  ]
+
+
+
+--INIT
+
+init : (Game, Cmd Msg)
+init =
+  let
+    ( keyboardModel, keyboardCmd ) = Keyboard.init
+  in
+    ( { player = Player (degrees 30)
+      , enemies = []
+      , enemySpeed = 0.0
+      , state = NewGame
+      , progress = 0
+      , timeStart = 0.0
+      , timeTick = 0.0
+      , msRunning = 0.0
+      , autoRotateAngle = 0.0
+      , autoRotateSpeed = 0.0
+      , hasBass = False
+      , keyboardModel = keyboardModel
+      , direction = 0
+      }
+    , Cmd.map KeyboardExtraMsg keyboardCmd
+    )
 
 
 main =
@@ -436,8 +457,6 @@ main =
   , update = update
   , view = view
   , subscriptions = subscriptions }
-
-
 
 
 
