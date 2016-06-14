@@ -17,6 +17,10 @@ import Html.App as App
 import Window exposing (Size)
 import AnimationFrame
 
+import Audio exposing (defaultPlaybackOptions)
+import Dict
+import Task
+
 
 -- MODEL
 type State = NewGame | Starting | Play | Pause | GameOver

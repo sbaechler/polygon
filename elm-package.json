@@ -4,7 +4,8 @@
     "repository": "https://github.com/sbaechler/polygon.git",
     "license": "All rights reserved",
     "source-directories": [
-        "src"
+        "src",
+        "lib/elm-audio/src"
     ],
     "exposed-modules": [],
     "dependencies": {
