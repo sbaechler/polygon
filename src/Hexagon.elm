@@ -11,24 +11,25 @@ import Text
 import Html
 import Html.App as App
 import String exposing (padLeft)
+import Task exposing (andThen)
+import Audio exposing (Sound)
 
 import Html
 import Html.App as App
 import Window exposing (Size)
 import AnimationFrame
 
-import Audio exposing (defaultPlaybackOptions)
-import Dict
-import Task
+import Music exposing (..)
 
 
 -- MODEL
-type State = NewGame | Starting | Play | Pause | GameOver
+type State = Loading | NewGame | Starting | Play | Pause | GameOver
 
 
 type Msg
   = Step Time
   | KeyboardExtraMsg Keyboard.Msg
+  | MusicLoaded Sound
 
 type alias Player =
   { angle: Float }
@@ -230,7 +231,7 @@ update msg game =
                  , state = nextState
           }
         , Cmd.map KeyboardExtraMsg keyboardCmd )
-    Step time -> (
+    Step time ->
       let
         nextState =
           case game.state of
@@ -238,7 +239,7 @@ update msg game =
             Play -> if isGameOver game then GameOver else Play
             _ -> game.state
       in
-        { game |
+        ( { game |
             player = updatePlayer game.direction game
           , enemies = updateEnemies game
           , enemySpeed = updateEnemySpeed game
@@ -249,8 +250,11 @@ update msg game =
           , msRunning = updateMsRunning time game
           , autoRotateAngle = updateAutoRotateAngle game
           , autoRotateSpeed = updateAutoRotateSpeed game
-          -- , hasBass = Debug.log "hasBass" (Music.hasBass game.msRunning)
+          , hasBass = Music.hasBass game.msRunning
         }, Cmd.none)
+    MusicLoaded music ->
+        ( { game | state = NewGame }
+        , Cmd.none)
 
 -- VIEW
 
@@ -434,7 +438,7 @@ init =
     ( { player = Player (degrees 30)
       , enemies = []
       , enemySpeed = 0.0
-      , state = NewGame
+      , state = Loading
       , progress = 0
       , timeStart = 0.0
       , timeTick = 0.0
@@ -445,7 +449,10 @@ init =
       , keyboardModel = keyboardModel
       , direction = 0
       }
-    , Cmd.map KeyboardExtraMsg keyboardCmd
+    , Cmd.batch
+      [ Cmd.map KeyboardExtraMsg keyboardCmd
+      , Task.perform (\_ -> MusicLoaded Audio.Sound) (\music -> MusicLoaded music) loadSound
+      ]
     )
 
 
