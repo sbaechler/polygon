@@ -12,7 +12,6 @@ import Html
 import Html.App as App
 import String exposing (padLeft)
 
-import Random
 import Html
 import Html.App as App
 import Window exposing (Size)
@@ -413,15 +412,11 @@ view game =
 
 -- SUBSCRIPTIONS
 
-step : Time -> Msg
-step time =
-  Step time
-
 
 subscriptions : Game -> Sub Msg
 subscriptions game =
   Sub.batch [
-    AnimationFrame.times step,
+    AnimationFrame.times (\time -> Step time),
     Sub.map KeyboardExtraMsg Keyboard.subscriptions
   ]
 
