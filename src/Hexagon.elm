@@ -125,9 +125,9 @@ colidesWith player enemy =
     collidesAtIndex: Int -> Bool
     collidesAtIndex index =
       let
-        fromAngle = Debug.log ("from Angle"++toString index) ((toFloat index) * 60)
-        toAngle = Debug.log ("to Angle"++ toString index) (((toFloat index)+1)*60)
-        playerDegrees = Debug.log "player degrees" (player.angle * 360 / (2*pi))
+        fromAngle = (toFloat index) * 60
+        toAngle = ((toFloat index) + 1) * 60
+        playerDegrees =  player.angle * 360 / (2*pi)
       in
         playerDegrees >= fromAngle && playerDegrees < toAngle
   in
@@ -162,8 +162,7 @@ updateAutoRotateAngle {autoRotateAngle, autoRotateSpeed} =
 
 updateAutoRotateSpeed: Game -> Float
 updateAutoRotateSpeed {progress, autoRotateSpeed} =
-  0.02 * sin (toFloat progress * 0.005 |> Debug.log "φ")
-  |> Debug.log "autoRotateSpeed"
+  0.02 * sin (toFloat progress * 0.005)
 
 updatePlayer: Int -> Game -> Player
 updatePlayer dir {player, state} =
@@ -201,7 +200,7 @@ updateEnemies game =
 
 updateEnemySpeed: Game -> Float
 updateEnemySpeed game =
-  Debug.log "enemy speed" (2 + (toFloat game.progress)/1000)
+  2 + (toFloat game.progress)/1000
 
 
 -- Game loop: Transition from one state to the next.
