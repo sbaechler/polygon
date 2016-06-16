@@ -1,4 +1,4 @@
-module Music exposing (hasBass, loadSound, playSound)
+module Music exposing (hasBass, loadSound, playbackOptions)
 
 import Audio exposing (defaultPlaybackOptions, Sound)
 import Dict
@@ -29,6 +29,6 @@ hasBass time =
 loadSound : Task String Sound
 loadSound = Audio.loadSound "music/music.mp3"
 
-playSound : Sound -> Task String ()
-playSound =
-  Audio.playSound defaultPlaybackOptions
+
+playbackOptions = {
+  defaultPlaybackOptions | loop = True, startAt = Nothing }

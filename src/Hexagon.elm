@@ -11,25 +11,26 @@ import Text
 import Html
 import Html.App as App
 import String exposing (padLeft)
-import Task exposing (andThen)
-import Audio exposing (Sound)
+import Task exposing (Task, andThen)
+import Audio exposing (PlaybackOptions, defaultPlaybackOptions, Sound)
 
 import Html
 import Html.App as App
 import Window exposing (Size)
 import AnimationFrame
 
-import Music exposing (..)
-
 
 -- MODEL
-type State = Loading | NewGame | Starting | Play | Pause | GameOver
+type State = Loading | NewGame | Starting | Play | Pause | Resume | GameOver
 
 
 type Msg
   = Step Time
   | KeyboardExtraMsg Keyboard.Msg
   | MusicLoaded Sound
+  | Error String
+  | PlaybackComplete
+  | Noop
 
 type alias Player =
   { angle: Float }
@@ -55,6 +56,7 @@ type alias Game =
   , direction : Int
   , keyboardModel : Keyboard.Model
   , hasBass : Bool
+  , music: Maybe Sound
   }
 
 type alias Colors =
@@ -93,22 +95,32 @@ bpm beat =
 pump : Int -> Float
 pump progress = beatAmplitude * (beat * toFloat progress + beatPhase |> sin)
 
---handleAudio : Game -> Audio.Action
---handleAudio game =
---  case game.state of
---    Play -> Audio.Play
---    Starting -> Audio.Seek 0
---    _ -> Audio.Pause
---
---propertiesHandler : Audio.Properties -> Maybe Audio.Action
---propertiesHandler properties = Nothing
---
---music : Signal (Audio.Event, Audio.Properties)
---music = Audio.audio { src = "music/music.mp3",
---                      triggers = Audio.defaultTriggers,
---                      propertiesHandler = propertiesHandler,
---                      actions = Signal.map handleAudio gameState }
+-- MUSIC
 
+hasBass : Time -> Bool
+hasBass time =
+  if time < 14760 then False
+  else if time < 44313 then True
+  else if time < 51668 then False
+  else if time < 129193 then True
+  else if time < 14387 then False
+  else True
+
+loadSound : Task String Sound
+loadSound = Audio.loadSound "music/music.mp3"
+
+
+playbackOptions = {
+  defaultPlaybackOptions | loop = True, startAt = Nothing }
+
+
+playSound : Sound -> PlaybackOptions -> Cmd Msg
+playSound sound options =
+  Task.perform Error (\_ -> PlaybackComplete) <| Audio.playSound options sound
+
+stopSound : Sound -> Cmd Msg
+stopSound sound =
+  Task.perform (always Noop) (always Noop) <| Audio.stopSound sound
 
 -- UPDATE
 
@@ -220,10 +232,10 @@ update msg game =
                 not (Keyboard.isPressed Keyboard.Space game.keyboardModel)
         nextState =
           case game.state of
-            NewGame -> if spacebar then Starting else Pause
+            NewGame -> if spacebar then Starting else NewGame
             Play -> if spacebar then Pause else Play
-            Pause -> if spacebar then Play else Pause
             GameOver -> if spacebar then NewGame else GameOver
+            Pause -> if spacebar then Resume else Pause
             _ -> game.state
       in
         ( { game | keyboardModel = keyboardModel
@@ -236,8 +248,19 @@ update msg game =
         nextState =
           case game.state of
             Starting -> Play
+            Resume -> Play
             Play -> if isGameOver game then GameOver else Play
             _ -> game.state
+        nextCmd =
+          case game.music of
+            Nothing -> Cmd.none
+            Just music ->
+              case game.state of
+                Starting -> playSound music { playbackOptions | startAt = Just 0 }
+                Resume -> playSound music playbackOptions
+                Pause -> stopSound music
+                GameOver -> stopSound music
+                _ -> Cmd.none
       in
         ( { game |
             player = updatePlayer game.direction game
@@ -245,16 +268,22 @@ update msg game =
           , enemySpeed = updateEnemySpeed game
           , state =  nextState
           , progress = updateProgress game
-          , timeStart = if game.state == NewGame then time else game.timeStart
+          , timeStart = if game.state == Starting then time else game.timeStart
           , timeTick = time
           , msRunning = updateMsRunning time game
           , autoRotateAngle = updateAutoRotateAngle game
           , autoRotateSpeed = updateAutoRotateSpeed game
-          , hasBass = Music.hasBass game.msRunning
-        }, Cmd.none)
+          , hasBass = hasBass game.msRunning
+        }, nextCmd )
     MusicLoaded music ->
-        ( { game | state = NewGame }
-        , Cmd.none)
+      ( { game |
+          state = NewGame,
+          music = Just music
+        }, Cmd.none)
+    Error message ->
+      Debug.crash message
+    _ -> (game, Cmd.none)
+
 
 -- VIEW
 
@@ -390,6 +419,7 @@ view game =
       |> makeTextBox 50
     message = makeTextBox 50 <|
       case game.state of
+        Loading -> "Loading..."
         GameOver -> "Game Over"
         Pause -> "Pause"
         _ -> ""
@@ -446,12 +476,13 @@ init =
       , autoRotateAngle = 0.0
       , autoRotateSpeed = 0.0
       , hasBass = False
+      , music = Nothing
       , keyboardModel = keyboardModel
       , direction = 0
       }
     , Cmd.batch
       [ Cmd.map KeyboardExtraMsg keyboardCmd
-      , Task.perform (\_ -> MusicLoaded Audio.Sound) (\music -> MusicLoaded music) loadSound
+      , Task.perform Error MusicLoaded loadSound
       ]
     )
 
