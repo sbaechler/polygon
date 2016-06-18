@@ -1,3 +1,5 @@
+-- Currently not in use.
+
 module Music exposing (hasBass, loadSound, playbackOptions)
 
 import Audio exposing (defaultPlaybackOptions, Sound)

@@ -220,68 +220,76 @@ updateEnemySpeed game =
   2 + (toFloat game.progress)/1000
 
 
--- Game loop: Transition from one state to the next.
+{-| Updates the game state on a keyboard command -}
+onUserInput : Keyboard.Msg -> Game -> (Game, Cmd Msg)
+onUserInput keyMsg game =
+  let
+    ( keyboardModel, keyboardCmd ) =
+      Keyboard.update keyMsg game.keyboardModel
+    spacebar = Keyboard.isPressed Keyboard.Space keyboardModel &&
+            not (Keyboard.isPressed Keyboard.Space game.keyboardModel)
+    nextState =
+      case game.state of
+        NewGame -> if spacebar then Starting else NewGame
+        Play -> if spacebar then Pause else Play
+        GameOver -> if spacebar then NewGame else GameOver
+        Pause -> if spacebar then Resume else Pause
+        _ -> game.state
+  in
+    ( { game | keyboardModel = keyboardModel
+             , direction = (Keyboard.arrows keyboardModel).x
+             , state = nextState
+      }
+    , Cmd.map KeyboardExtraMsg keyboardCmd )
+
+{-| Updates the game state on every frame -}
+onFrame : Time -> Game -> (Game, Cmd Msg)
+onFrame time game =
+  let
+    nextState =
+      case game.state of
+        Starting -> Play
+        Resume -> Play
+        Play -> if isGameOver game then GameOver else Play
+        _ -> game.state
+    nextCmd =
+      case game.music of
+        Nothing -> Cmd.none
+        Just music ->
+          case game.state of
+            Starting -> playSound music { playbackOptions | startAt = Just 0 }
+            Resume -> playSound music playbackOptions
+            Pause -> stopSound music
+            GameOver -> stopSound music
+            _ -> Cmd.none
+  in
+    ( { game |
+        player = updatePlayer game.direction game
+      , enemies = updateEnemies game
+      , enemySpeed = updateEnemySpeed game
+      , state =  nextState
+      , progress = updateProgress game
+      , timeStart = if game.state == Starting then time else game.timeStart
+      , timeTick = time
+      , msRunning = updateMsRunning time game
+      , autoRotateAngle = updateAutoRotateAngle game
+      , autoRotateSpeed = updateAutoRotateSpeed game
+      , hasBass = hasBass game.msRunning
+    }, nextCmd )
+
+
+{-| Game loop: Transition from one state to the next. -}
 update : Msg -> Game -> (Game, Cmd Msg)
 update msg game =
   case msg of
-    KeyboardExtraMsg keyMsg ->
-      let
-        ( keyboardModel, keyboardCmd ) =
-          Keyboard.update keyMsg game.keyboardModel
-        spacebar = Keyboard.isPressed Keyboard.Space keyboardModel &&
-                not (Keyboard.isPressed Keyboard.Space game.keyboardModel)
-        nextState =
-          case game.state of
-            NewGame -> if spacebar then Starting else NewGame
-            Play -> if spacebar then Pause else Play
-            GameOver -> if spacebar then NewGame else GameOver
-            Pause -> if spacebar then Resume else Pause
-            _ -> game.state
-      in
-        ( { game | keyboardModel = keyboardModel
-                 , direction = (Keyboard.arrows keyboardModel).x
-                 , state = nextState
-          }
-        , Cmd.map KeyboardExtraMsg keyboardCmd )
-    Step time ->
-      let
-        nextState =
-          case game.state of
-            Starting -> Play
-            Resume -> Play
-            Play -> if isGameOver game then GameOver else Play
-            _ -> game.state
-        nextCmd =
-          case game.music of
-            Nothing -> Cmd.none
-            Just music ->
-              case game.state of
-                Starting -> playSound music { playbackOptions | startAt = Just 0 }
-                Resume -> playSound music playbackOptions
-                Pause -> stopSound music
-                GameOver -> stopSound music
-                _ -> Cmd.none
-      in
-        ( { game |
-            player = updatePlayer game.direction game
-          , enemies = updateEnemies game
-          , enemySpeed = updateEnemySpeed game
-          , state =  nextState
-          , progress = updateProgress game
-          , timeStart = if game.state == Starting then time else game.timeStart
-          , timeTick = time
-          , msRunning = updateMsRunning time game
-          , autoRotateAngle = updateAutoRotateAngle game
-          , autoRotateSpeed = updateAutoRotateSpeed game
-          , hasBass = hasBass game.msRunning
-        }, nextCmd )
+    KeyboardExtraMsg keyMsg -> onUserInput keyMsg game
+    Step time -> onFrame time game
     MusicLoaded music ->
       ( { game |
           state = NewGame,
           music = Just music
         }, Cmd.none)
-    Error message ->
-      Debug.crash message
+    Error message -> Debug.crash message
     _ -> (game, Cmd.none)
 
 

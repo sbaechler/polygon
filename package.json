@@ -1,8 +1,9 @@
 {
   "private": true,
   "scripts": {
-    "build": "elm-make --yes src/Game.elm --output=./elm.js && cp index.template.html index.html",
-    "server": "elm-reactor"
+    "build": "elm-make src/Hexagon.elm --output=public/index.html",
+    "server": "elm-reactor",
+    "setup": "elm-package install && git submodule update --init"
   },
   "dependencies": {
     "elm": "^0.17.0"
