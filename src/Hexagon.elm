@@ -116,7 +116,7 @@ playbackOptions = {
 
 playSound : Sound -> PlaybackOptions -> Cmd Msg
 playSound sound options =
-  Task.perform Error (\_ -> Noop) <| Audio.playSound options sound
+  Task.perform Error (always Noop) <| Audio.playSound options sound
 
 stopSound : Sound -> Cmd Msg
 stopSound sound =
