@@ -21,7 +21,7 @@ import AnimationFrame
 
 
 -- MODEL
-type State = Loading | NewGame | Starting | Play | Pause | Resume | GameOver
+type State = Loading | NewGame | Starting | Play | Pausing | Pause | Resume | Dying | GameOver
 
 
 type Msg
@@ -83,9 +83,9 @@ enemyThickness = 30
 
 startMessage = "SPACE to start, &larr;&rarr; to move"
 
-beat = 130.0 |> bpm
+beat = 138.0 |> bpm  -- original: 130
 beatAmplitude = 0.06
-beatPhase = 180 |> degrees
+beatPhase = 270 |> degrees  -- original: 180
 
 -- Calculate Beat Per Minute
 bpm : Float -> Float
@@ -99,15 +99,16 @@ pump progress = beatAmplitude * (beat * toFloat progress + beatPhase |> sin)
 
 hasBass : Time -> Bool
 hasBass time =
-  if time < 14760 then False
-  else if time < 44313 then True
-  else if time < 51668 then False
-  else if time < 129193 then True
-  else if time < 14387 then False
-  else True
+  if time < 20894 then False
+  else if time < 41976 then True
+  else if time < 55672 then False
+  else if time < 67842 then True
+  else if time < 187846 then False
+  else if time < 215938 then True
+  else False
 
 loadSound : Task String Sound
-loadSound = Audio.loadSound "music/music.mp3"
+loadSound = Audio.loadSound "music/shinytech.mp3"
 
 
 playbackOptions = {
@@ -231,7 +232,7 @@ onUserInput keyMsg game =
     nextState =
       case game.state of
         NewGame -> if spacebar then Starting else NewGame
-        Play -> if spacebar then Pause else Play
+        Play -> if spacebar then Pausing else Play
         GameOver -> if spacebar then NewGame else GameOver
         Pause -> if spacebar then Resume else Pause
         _ -> game.state
@@ -250,7 +251,9 @@ onFrame time game =
       case game.state of
         Starting -> Play
         Resume -> Play
-        Play -> if isGameOver game then GameOver else Play
+        Pausing -> Pause
+        Play -> if isGameOver game then Dying else Play
+        Dying -> GameOver
         _ -> game.state
     nextCmd =
       case game.music of
@@ -258,9 +261,9 @@ onFrame time game =
         Just music ->
           case game.state of
             Starting -> playSound music { playbackOptions | startAt = Just 0 }
+            Pausing -> stopSound music
+            Dying -> stopSound music
             Resume -> playSound music playbackOptions
-            Pause -> stopSound music
-            GameOver -> stopSound music
             _ -> Cmd.none
   in
     ( { game |

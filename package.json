@@ -1,7 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "build": "elm-make src/Hexagon.elm --output=public/index.html",
+    "build": "elm-make src/Hexagon.elm --yes src/Hexagon.elm --output=public/elm.js && cp index.template.html public/index.html",
     "server": "elm-reactor",
     "setup": "elm-package install && git submodule update --init"
   },
