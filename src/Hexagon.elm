@@ -21,7 +21,7 @@ import AnimationFrame
 
 
 -- MODEL
-type State = Loading | NewGame | Starting | Play | Pausing | Pause | Resume | Dying | GameOver
+type State = Loading | NewGame | Starting | Play | Pausing | Pause | Resume | GameOver
 
 
 type Msg
@@ -246,24 +246,18 @@ onUserInput keyMsg game =
 onFrame : Time -> Game -> (Game, Cmd Msg)
 onFrame time game =
   let
-    nextState =
-      case game.state of
-        Starting -> Play
-        Resume -> Play
-        Pausing -> Pause
-        Play -> if isGameOver game then Dying else Play
-        Dying -> GameOver
-        _ -> game.state
-    nextCmd =
+    (nextState, nextCmd) =
       case game.music of
-        Nothing -> Cmd.none
+        Nothing -> (Loading, Cmd.none)
         Just music ->
           case game.state of
-            Starting -> playSound music { playbackOptions | startAt = Just 0 }
-            Pausing -> stopSound music
-            Dying -> stopSound music
-            Resume -> playSound music playbackOptions
-            _ -> Cmd.none
+            Starting -> (Play, playSound music { playbackOptions | startAt = Just 0 })
+            Resume -> (Play, playSound music playbackOptions)
+            Pausing -> (Pause, stopSound music)
+            Play -> if isGameOver game
+              then (GameOver, stopSound music)
+              else (Play, Cmd.none)
+            _ -> (game.state, Cmd.none)
   in
     ( { game |
         player = updatePlayer game.direction game
