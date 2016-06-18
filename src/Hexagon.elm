@@ -29,7 +29,6 @@ type Msg
   | KeyboardExtraMsg Keyboard.Msg
   | MusicLoaded Sound
   | Error String
-  | PlaybackComplete
   | Noop
 
 type alias Player =
@@ -117,7 +116,7 @@ playbackOptions = {
 
 playSound : Sound -> PlaybackOptions -> Cmd Msg
 playSound sound options =
-  Task.perform Error (\_ -> PlaybackComplete) <| Audio.playSound options sound
+  Task.perform Error (\_ -> Noop) <| Audio.playSound options sound
 
 stopSound : Sound -> Cmd Msg
 stopSound sound =
