@@ -11526,7 +11526,6 @@ var _sbaechler$polygon$Main$Colors = F3(
 		return {dark: a, medium: b, bright: c};
 	});
 var _sbaechler$polygon$Main$GameOver = {ctor: 'GameOver'};
-var _sbaechler$polygon$Main$Dying = {ctor: 'Dying'};
 var _sbaechler$polygon$Main$Resume = {ctor: 'Resume'};
 var _sbaechler$polygon$Main$Pause = {ctor: 'Pause'};
 var _sbaechler$polygon$Main$Pausing = {ctor: 'Pausing'};
@@ -11625,7 +11624,6 @@ var _sbaechler$polygon$Main$stopSound = function (sound) {
 		_elm_lang$core$Basics$always(_sbaechler$polygon$Main$Noop),
 		_sbaechler$polygon$Audio$stopSound(sound));
 };
-var _sbaechler$polygon$Main$PlaybackComplete = {ctor: 'PlaybackComplete'};
 var _sbaechler$polygon$Main$Error = function (a) {
 	return {ctor: 'Error', _0: a};
 };
@@ -11634,58 +11632,57 @@ var _sbaechler$polygon$Main$playSound = F2(
 		return A3(
 			_elm_lang$core$Task$perform,
 			_sbaechler$polygon$Main$Error,
-			function (_p20) {
-				return _sbaechler$polygon$Main$PlaybackComplete;
-			},
+			_elm_lang$core$Basics$always(_sbaechler$polygon$Main$Noop),
 			A2(_sbaechler$polygon$Audio$playSound, options, sound));
 	});
 var _sbaechler$polygon$Main$onFrame = F2(
 	function (time, game) {
-		var nextCmd = function () {
+		var _p20 = function () {
 			var _p21 = game.music;
 			if (_p21.ctor === 'Nothing') {
-				return _elm_lang$core$Platform_Cmd$none;
+				return {ctor: '_Tuple2', _0: _sbaechler$polygon$Main$Loading, _1: _elm_lang$core$Platform_Cmd$none};
 			} else {
 				var _p23 = _p21._0;
 				var _p22 = game.state;
 				switch (_p22.ctor) {
 					case 'Starting':
-						return A2(
-							_sbaechler$polygon$Main$playSound,
-							_p23,
-							_elm_lang$core$Native_Utils.update(
-								_sbaechler$polygon$Main$playbackOptions,
-								{
-									startAt: _elm_lang$core$Maybe$Just(0)
-								}));
-					case 'Pausing':
-						return _sbaechler$polygon$Main$stopSound(_p23);
-					case 'Dying':
-						return _sbaechler$polygon$Main$stopSound(_p23);
+						return {
+							ctor: '_Tuple2',
+							_0: _sbaechler$polygon$Main$Play,
+							_1: A2(
+								_sbaechler$polygon$Main$playSound,
+								_p23,
+								_elm_lang$core$Native_Utils.update(
+									_sbaechler$polygon$Main$playbackOptions,
+									{
+										startAt: _elm_lang$core$Maybe$Just(0)
+									}))
+						};
 					case 'Resume':
-						return A2(_sbaechler$polygon$Main$playSound, _p23, _sbaechler$polygon$Main$playbackOptions);
+						return {
+							ctor: '_Tuple2',
+							_0: _sbaechler$polygon$Main$Play,
+							_1: A2(_sbaechler$polygon$Main$playSound, _p23, _sbaechler$polygon$Main$playbackOptions)
+						};
+					case 'Pausing':
+						return {
+							ctor: '_Tuple2',
+							_0: _sbaechler$polygon$Main$Pause,
+							_1: _sbaechler$polygon$Main$stopSound(_p23)
+						};
+					case 'Play':
+						return _sbaechler$polygon$Main$isGameOver(game) ? {
+							ctor: '_Tuple2',
+							_0: _sbaechler$polygon$Main$GameOver,
+							_1: _sbaechler$polygon$Main$stopSound(_p23)
+						} : {ctor: '_Tuple2', _0: _sbaechler$polygon$Main$Play, _1: _elm_lang$core$Platform_Cmd$none};
 					default:
-						return _elm_lang$core$Platform_Cmd$none;
+						return {ctor: '_Tuple2', _0: game.state, _1: _elm_lang$core$Platform_Cmd$none};
 				}
 			}
 		}();
-		var nextState = function () {
-			var _p24 = game.state;
-			switch (_p24.ctor) {
-				case 'Starting':
-					return _sbaechler$polygon$Main$Play;
-				case 'Resume':
-					return _sbaechler$polygon$Main$Play;
-				case 'Pausing':
-					return _sbaechler$polygon$Main$Pause;
-				case 'Play':
-					return _sbaechler$polygon$Main$isGameOver(game) ? _sbaechler$polygon$Main$Dying : _sbaechler$polygon$Main$Play;
-				case 'Dying':
-					return _sbaechler$polygon$Main$GameOver;
-				default:
-					return game.state;
-			}
-		}();
+		var nextState = _p20._0;
+		var nextCmd = _p20._1;
 		return {
 			ctor: '_Tuple2',
 			_0: _elm_lang$core$Native_Utils.update(
@@ -11714,14 +11711,14 @@ var _sbaechler$polygon$Main$KeyboardExtraMsg = function (a) {
 };
 var _sbaechler$polygon$Main$onUserInput = F2(
 	function (keyMsg, game) {
-		var _p25 = A2(_ohanhi$keyboard_extra$Keyboard_Extra$update, keyMsg, game.keyboardModel);
-		var keyboardModel = _p25._0;
-		var keyboardCmd = _p25._1;
+		var _p24 = A2(_ohanhi$keyboard_extra$Keyboard_Extra$update, keyMsg, game.keyboardModel);
+		var keyboardModel = _p24._0;
+		var keyboardCmd = _p24._1;
 		var spacebar = A2(_ohanhi$keyboard_extra$Keyboard_Extra$isPressed, _ohanhi$keyboard_extra$Keyboard_Extra$Space, keyboardModel) && _elm_lang$core$Basics$not(
 			A2(_ohanhi$keyboard_extra$Keyboard_Extra$isPressed, _ohanhi$keyboard_extra$Keyboard_Extra$Space, game.keyboardModel));
 		var nextState = function () {
-			var _p26 = game.state;
-			switch (_p26.ctor) {
+			var _p25 = game.state;
+			switch (_p25.ctor) {
 				case 'NewGame':
 					return spacebar ? _sbaechler$polygon$Main$Starting : _sbaechler$polygon$Main$NewGame;
 				case 'Play':
@@ -11748,12 +11745,12 @@ var _sbaechler$polygon$Main$onUserInput = F2(
 	});
 var _sbaechler$polygon$Main$update = F2(
 	function (msg, game) {
-		var _p27 = msg;
-		switch (_p27.ctor) {
+		var _p26 = msg;
+		switch (_p26.ctor) {
 			case 'KeyboardExtraMsg':
-				return A2(_sbaechler$polygon$Main$onUserInput, _p27._0, game);
+				return A2(_sbaechler$polygon$Main$onUserInput, _p26._0, game);
 			case 'Step':
-				return A2(_sbaechler$polygon$Main$onFrame, _p27._0, game);
+				return A2(_sbaechler$polygon$Main$onFrame, _p26._0, game);
 			case 'MusicLoaded':
 				return {
 					ctor: '_Tuple2',
@@ -11761,7 +11758,7 @@ var _sbaechler$polygon$Main$update = F2(
 						game,
 						{
 							state: _sbaechler$polygon$Main$NewGame,
-							music: _elm_lang$core$Maybe$Just(_p27._0)
+							music: _elm_lang$core$Maybe$Just(_p26._0)
 						}),
 					_1: _elm_lang$core$Platform_Cmd$none
 				};
@@ -11769,18 +11766,18 @@ var _sbaechler$polygon$Main$update = F2(
 				return _elm_lang$core$Native_Utils.crashCase(
 					'Main',
 					{
-						start: {line: 287, column: 3},
-						end: {line: 296, column: 26}
+						start: {line: 280, column: 3},
+						end: {line: 289, column: 26}
 					},
-					_p27)(_p27._0);
+					_p26)(_p26._0);
 			default:
 				return {ctor: '_Tuple2', _0: game, _1: _elm_lang$core$Platform_Cmd$none};
 		}
 	});
 var _sbaechler$polygon$Main$init = function () {
-	var _p29 = _ohanhi$keyboard_extra$Keyboard_Extra$init;
-	var keyboardModel = _p29._0;
-	var keyboardCmd = _p29._1;
+	var _p28 = _ohanhi$keyboard_extra$Keyboard_Extra$init;
+	var keyboardModel = _p28._0;
+	var keyboardCmd = _p28._1;
 	return {
 		ctor: '_Tuple2',
 		_0: {
