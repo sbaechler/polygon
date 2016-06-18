@@ -2,11 +2,18 @@
 <head>
   <title>Hexagon</title>
     <style type="text/css">
+      html, body { margin: 0; }
       #app {
         display: flex;
         justify-content: center;
         align-items: center;
         height: 100vh;
+        z-index: 10;
+      }
+      .disclaimer {
+        padding-left: 1em;
+        position: absolute;
+        bottom: 0;
       }
     </style>
 </head>
@@ -14,7 +21,7 @@
 
   <div id="app"></div>
 
-  <p><small>Music by Shiny Tech Kevin MacLeod (incompetech.com)<br>
+  <p class="disclaimer"><small>Music by Shiny Tech Kevin MacLeod (incompetech.com)<br>
     Licensed under Creative Commons: <a href="http://creativecommons.org/licenses/by/3.0/">By Attribution 3.0 License</a>
     </small></p>
 
