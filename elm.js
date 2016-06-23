@@ -11172,9 +11172,8 @@ var _sbaechler$polygon$Main$makeTextBox = F2(
 						A3(_elm_lang$core$Color$rgb, 255, 255, 255),
 						_evancz$elm_graphics$Text$fromString(string)))));
 	});
-var _sbaechler$polygon$Main$makeColors = function (progress) {
-	var hue = _elm_lang$core$Basics$degrees(0.1) * _elm_lang$core$Basics$toFloat(
-		A2(_elm_lang$core$Basics_ops['%'], progress, 3600));
+var _sbaechler$polygon$Main$makeColors = function (msRunning) {
+	var hue = 5.0e-5 * msRunning;
 	return {
 		dark: A3(_elm_lang$core$Color$hsl, hue, 0.6, 0.2),
 		medium: A3(_elm_lang$core$Color$hsl, hue, 0.6, 0.3),
@@ -11206,13 +11205,9 @@ var _sbaechler$polygon$Main$moveRadial = F2(
 				_1: radius * _elm_lang$core$Basics$sin(angle)
 			});
 	});
-var _sbaechler$polygon$Main$updateEnemySpeed = function (game) {
-	return 2 + (_elm_lang$core$Basics$toFloat(game.progress) / 1000);
-};
 var _sbaechler$polygon$Main$updateAutoRotateSpeed = function (_p0) {
 	var _p1 = _p0;
-	return 2.0e-2 * _elm_lang$core$Basics$sin(
-		_elm_lang$core$Basics$toFloat(_p1.progress) * 5.0e-3);
+	return 2.0e-2 * _elm_lang$core$Basics$sin(_p1.msRunning * 3.0e-4);
 };
 var _sbaechler$polygon$Main$updateAutoRotateAngle = function (_p2) {
 	var _p3 = _p2;
@@ -11230,19 +11225,6 @@ var _sbaechler$polygon$Main$updateMsRunning = F2(
 				return game.msRunning;
 		}
 	});
-var _sbaechler$polygon$Main$updateProgress = function (_p5) {
-	var _p6 = _p5;
-	var _p8 = _p6.progress;
-	var _p7 = _p6.state;
-	switch (_p7.ctor) {
-		case 'NewGame':
-			return 0;
-		case 'Play':
-			return _p8 + 1;
-		default:
-			return _p8;
-	}
-};
 var _sbaechler$polygon$Main$playbackOptions = _elm_lang$core$Native_Utils.update(
 	_sbaechler$polygon$Audio$defaultPlaybackOptions,
 	{loop: true, startAt: _elm_lang$core$Maybe$Nothing});
@@ -11251,19 +11233,18 @@ var _sbaechler$polygon$Main$hasBass = function (time) {
 	return (_elm_lang$core$Native_Utils.cmp(time, 20894) < 0) ? false : ((_elm_lang$core$Native_Utils.cmp(time, 41976) < 0) ? true : ((_elm_lang$core$Native_Utils.cmp(time, 55672) < 0) ? false : ((_elm_lang$core$Native_Utils.cmp(time, 67842) < 0) ? true : ((_elm_lang$core$Native_Utils.cmp(time, 187846) < 0) ? false : ((_elm_lang$core$Native_Utils.cmp(time, 215938) < 0) ? true : false)))));
 };
 var _sbaechler$polygon$Main$bpm = function (beat) {
-	return ((2.0 * _elm_lang$core$Basics$pi) * beat) / 3600;
+	return ((2.0 * _elm_lang$core$Basics$pi) * beat) / 60;
 };
 var _sbaechler$polygon$Main$beatPhase = _elm_lang$core$Basics$degrees(270);
 var _sbaechler$polygon$Main$beatAmplitude = 6.0e-2;
 var _sbaechler$polygon$Main$beat = _sbaechler$polygon$Main$bpm(138.0);
 var _sbaechler$polygon$Main$pump = function (progress) {
-	return _sbaechler$polygon$Main$beatAmplitude * _elm_lang$core$Basics$sin(
-		(_sbaechler$polygon$Main$beat * _elm_lang$core$Basics$toFloat(progress)) + _sbaechler$polygon$Main$beatPhase);
+	return _sbaechler$polygon$Main$beatAmplitude * _elm_lang$core$Basics$sin(((_sbaechler$polygon$Main$beat * progress) / 1000) + _sbaechler$polygon$Main$beatPhase);
 };
 var _sbaechler$polygon$Main$makeCenterHole = F2(
 	function (colors, game) {
 		var line = _evancz$elm_graphics$Collage$solid(colors.bright);
-		var bassAdd = game.hasBass ? (100.0 * _sbaechler$polygon$Main$beatAmplitude) : (100.0 * _sbaechler$polygon$Main$pump(game.progress));
+		var bassAdd = game.hasBass ? 0 : (100.0 * _sbaechler$polygon$Main$pump(game.msRunning));
 		var shape = A2(_evancz$elm_graphics$Collage$ngon, 6, 60 + bassAdd);
 		return _elm_lang$core$Native_List.fromArray(
 			[
@@ -11284,9 +11265,60 @@ var _sbaechler$polygon$Main$makeCenterHole = F2(
 	});
 var _sbaechler$polygon$Main$beatPulse = function (game) {
 	return game.hasBass ? _evancz$elm_graphics$Collage$scale(
-		1 + _sbaechler$polygon$Main$pump(game.progress)) : _elm_lang$core$Basics$identity;
+		1 + _sbaechler$polygon$Main$pump(game.msRunning)) : _elm_lang$core$Basics$identity;
 };
 var _sbaechler$polygon$Main$startMessage = 'SPACE to start, &larr;&rarr; to move';
+var _sbaechler$polygon$Main$enemies = _elm_lang$core$Native_List.fromArray(
+	[
+		_elm_lang$core$Native_List.fromArray(
+		[false, true, false, true, false, true]),
+		_elm_lang$core$Native_List.fromArray(
+		[false, true, true, true, true, true]),
+		_elm_lang$core$Native_List.fromArray(
+		[true, false, true, true, true, true]),
+		_elm_lang$core$Native_List.fromArray(
+		[true, true, true, true, false, true]),
+		_elm_lang$core$Native_List.fromArray(
+		[true, true, true, false, true, true]),
+		_elm_lang$core$Native_List.fromArray(
+		[false, true, false, true, false, true]),
+		_elm_lang$core$Native_List.fromArray(
+		[true, false, true, false, true, false]),
+		_elm_lang$core$Native_List.fromArray(
+		[true, true, true, true, true, false])
+	]);
+var _sbaechler$polygon$Main$enemyAcceleration = 2.0e-6;
+var _sbaechler$polygon$Main$enemyInitialSpeed = 0.25;
+var _sbaechler$polygon$Main$updateEnemySpeed = function (game) {
+	return _sbaechler$polygon$Main$enemyInitialSpeed + (game.msRunning * _sbaechler$polygon$Main$enemyAcceleration);
+};
+var _sbaechler$polygon$Main$enemyDistance = 350;
+var _sbaechler$polygon$Main$updateEnemies = function (game) {
+	var numEnemies = _elm_lang$core$List$length(_sbaechler$polygon$Main$enemies);
+	var maxDistance = numEnemies * _sbaechler$polygon$Main$enemyDistance;
+	var enemyProgress = game.msRunning * game.enemySpeed;
+	var offsetForEnemy = function (index) {
+		return _elm_lang$core$Basics$round(
+			(_sbaechler$polygon$Main$enemyDistance * _elm_lang$core$Basics$toFloat(index)) - enemyProgress);
+	};
+	var radiusFor = function (index) {
+		return _elm_lang$core$Basics$toFloat(
+			A2(
+				_elm_lang$core$Basics_ops['%'],
+				offsetForEnemy(index),
+				maxDistance));
+	};
+	return A2(
+		_elm_lang$core$List$indexedMap,
+		F2(
+			function (index, parts) {
+				return {
+					parts: parts,
+					radius: radiusFor(index)
+				};
+			}),
+		_sbaechler$polygon$Main$enemies);
+};
 var _sbaechler$polygon$Main$enemyThickness = 30;
 var _sbaechler$polygon$Main$makeEnemy = F2(
 	function (color, enemy) {
@@ -11328,19 +11360,14 @@ var _sbaechler$polygon$Main$makeEnemies = F2(
 			_sbaechler$polygon$Main$makeEnemy(color),
 			enemys);
 	});
-var _sbaechler$polygon$Main$playerSpeed = 0.128;
-var _sbaechler$polygon$Main$updatePlayerAngle = F2(
-	function (angle, dir) {
-		var newAngle = angle + (_elm_lang$core$Basics$toFloat(0 - dir) * _sbaechler$polygon$Main$playerSpeed);
-		return (_elm_lang$core$Native_Utils.cmp(newAngle, 0) < 0) ? (newAngle + (2 * _elm_lang$core$Basics$pi)) : ((_elm_lang$core$Native_Utils.cmp(newAngle, 2 * _elm_lang$core$Basics$pi) > 0) ? (newAngle - (2 * _elm_lang$core$Basics$pi)) : newAngle);
-	});
+var _sbaechler$polygon$Main$playerSpeed = 0.12;
 var _sbaechler$polygon$Main$bgBlack = A3(_elm_lang$core$Color$rgb, 20, 20, 20);
-var _sbaechler$polygon$Main$_p9 = {ctor: '_Tuple2', _0: 1024, _1: 576};
-var _sbaechler$polygon$Main$gameWidth = _sbaechler$polygon$Main$_p9._0;
-var _sbaechler$polygon$Main$gameHeight = _sbaechler$polygon$Main$_p9._1;
-var _sbaechler$polygon$Main$_p10 = {ctor: '_Tuple2', _0: _sbaechler$polygon$Main$gameWidth / 2, _1: _sbaechler$polygon$Main$gameHeight / 2};
-var _sbaechler$polygon$Main$halfWidth = _sbaechler$polygon$Main$_p10._0;
-var _sbaechler$polygon$Main$halfHeight = _sbaechler$polygon$Main$_p10._1;
+var _sbaechler$polygon$Main$_p5 = {ctor: '_Tuple2', _0: 1024, _1: 576};
+var _sbaechler$polygon$Main$gameWidth = _sbaechler$polygon$Main$_p5._0;
+var _sbaechler$polygon$Main$gameHeight = _sbaechler$polygon$Main$_p5._1;
+var _sbaechler$polygon$Main$_p6 = {ctor: '_Tuple2', _0: _sbaechler$polygon$Main$gameWidth / 2, _1: _sbaechler$polygon$Main$gameHeight / 2};
+var _sbaechler$polygon$Main$halfWidth = _sbaechler$polygon$Main$_p6._0;
+var _sbaechler$polygon$Main$halfHeight = _sbaechler$polygon$Main$_p6._1;
 var _sbaechler$polygon$Main$hexagonElement = function (i) {
 	var angle1 = _elm_lang$core$Basics$degrees(
 		_elm_lang$core$Basics$toFloat(60 * (i + 1)));
@@ -11381,63 +11408,9 @@ var _sbaechler$polygon$Main$makeField = function (colors) {
 			poly,
 			_elm_lang$core$Native_List.range(0, 5)));
 };
-var _sbaechler$polygon$Main$_p11 = {ctor: '_Tuple2', _0: (_sbaechler$polygon$Main$gameWidth / 2) | 0, _1: (_sbaechler$polygon$Main$gameHeight / 2) | 0};
-var _sbaechler$polygon$Main$iHalfWidth = _sbaechler$polygon$Main$_p11._0;
-var _sbaechler$polygon$Main$iHalfHeight = _sbaechler$polygon$Main$_p11._1;
-var _sbaechler$polygon$Main$updateEnemies = function (game) {
-	var partsFor = function (index) {
-		var _p12 = index;
-		switch (_p12) {
-			case 0:
-				return _elm_lang$core$Native_List.fromArray(
-					[true, true, true, false, true, true]);
-			case 1:
-				return _elm_lang$core$Native_List.fromArray(
-					[true, true, true, false, true, true]);
-			case 2:
-				return _elm_lang$core$Native_List.fromArray(
-					[false, true, false, true, true, true]);
-			case 3:
-				return _elm_lang$core$Native_List.fromArray(
-					[false, true, true, true, true, true]);
-			default:
-				return _elm_lang$core$Native_List.fromArray(
-					[true, false, true, true, true, true]);
-		}
-	};
-	var enemyDistance = 300;
-	var radiusFor = function (index) {
-		return _elm_lang$core$Basics$toFloat(
-			_sbaechler$polygon$Main$enemyThickness + A2(
-				_elm_lang$core$Basics_ops['%'],
-				_sbaechler$polygon$Main$iHalfWidth + _elm_lang$core$Basics$round(
-					(enemyDistance * _elm_lang$core$Basics$toFloat(index)) - (_elm_lang$core$Basics$toFloat(game.progress) * game.enemySpeed)),
-				enemyDistance * 5));
-	};
-	return _elm_lang$core$Native_List.fromArray(
-		[
-			{
-			parts: partsFor(0),
-			radius: radiusFor(0)
-		},
-			{
-			parts: partsFor(1),
-			radius: radiusFor(1)
-		},
-			{
-			parts: partsFor(2),
-			radius: radiusFor(2)
-		},
-			{
-			parts: partsFor(3),
-			radius: radiusFor(3)
-		},
-			{
-			parts: partsFor(4),
-			radius: radiusFor(4)
-		}
-		]);
-};
+var _sbaechler$polygon$Main$_p7 = {ctor: '_Tuple2', _0: (_sbaechler$polygon$Main$gameWidth / 2) | 0, _1: (_sbaechler$polygon$Main$gameHeight / 2) | 0};
+var _sbaechler$polygon$Main$iHalfWidth = _sbaechler$polygon$Main$_p7._0;
+var _sbaechler$polygon$Main$iHalfHeight = _sbaechler$polygon$Main$_p7._1;
 var _sbaechler$polygon$Main$playerRadius = _sbaechler$polygon$Main$gameWidth / 10.0;
 var _sbaechler$polygon$Main$colidesWith = F2(
 	function (player, enemy) {
@@ -11464,12 +11437,12 @@ var _sbaechler$polygon$Main$colidesWith = F2(
 							}),
 						enemy.parts))));
 	});
-var _sbaechler$polygon$Main$isGameOver = function (_p13) {
-	var _p14 = _p13;
+var _sbaechler$polygon$Main$isGameOver = function (_p8) {
+	var _p9 = _p8;
 	return A2(
 		_elm_lang$core$List$any,
-		_sbaechler$polygon$Main$colidesWith(_p14.player),
-		_p14.enemies);
+		_sbaechler$polygon$Main$colidesWith(_p9.player),
+		_p9.enemies);
 };
 var _sbaechler$polygon$Main$makePlayer = function (player) {
 	var angle = player.angle - _elm_lang$core$Basics$degrees(30);
@@ -11505,9 +11478,7 @@ var _sbaechler$polygon$Main$Game = function (a) {
 										return function (k) {
 											return function (l) {
 												return function (m) {
-													return function (n) {
-														return {player: a, enemies: b, enemySpeed: c, state: d, progress: e, timeStart: f, timeTick: g, msRunning: h, autoRotateAngle: i, autoRotateSpeed: j, direction: k, keyboardModel: l, hasBass: m, music: n};
-													};
+													return {player: a, direction: b, enemies: c, enemySpeed: d, keyboardModel: e, state: f, timeStart: g, timeTick: h, msRunning: i, autoRotateAngle: j, autoRotateSpeed: k, hasBass: l, music: m};
 												};
 											};
 										};
@@ -11539,8 +11510,8 @@ var _sbaechler$polygon$Main$view = function (game) {
 		_sbaechler$polygon$Main$makeTextBox,
 		50,
 		function () {
-			var _p15 = game.state;
-			switch (_p15.ctor) {
+			var _p10 = game.state;
+			switch (_p10.ctor) {
 				case 'Loading':
 					return 'Loading...';
 				case 'GameOver':
@@ -11555,7 +11526,7 @@ var _sbaechler$polygon$Main$view = function (game) {
 		_sbaechler$polygon$Main$makeTextBox,
 		50,
 		_sbaechler$polygon$Main$formatTime(game.msRunning));
-	var colors = _sbaechler$polygon$Main$makeColors(game.progress);
+	var colors = _sbaechler$polygon$Main$makeColors(game.msRunning);
 	var field = _evancz$elm_graphics$Collage$group(
 		A2(
 			_elm_lang$core$List$append,
@@ -11601,20 +11572,6 @@ var _sbaechler$polygon$Main$view = function (game) {
 };
 var _sbaechler$polygon$Main$Starting = {ctor: 'Starting'};
 var _sbaechler$polygon$Main$NewGame = {ctor: 'NewGame'};
-var _sbaechler$polygon$Main$updatePlayer = F2(
-	function (dir, _p16) {
-		var _p17 = _p16;
-		var _p19 = _p17.state;
-		var _p18 = _p17.player;
-		if (_elm_lang$core$Native_Utils.eq(_p19, _sbaechler$polygon$Main$Play)) {
-			var newAngle = _elm_lang$core$Native_Utils.eq(_p19, _sbaechler$polygon$Main$NewGame) ? _elm_lang$core$Basics$degrees(30) : A2(_sbaechler$polygon$Main$updatePlayerAngle, _p18.angle, dir);
-			return _elm_lang$core$Native_Utils.update(
-				_p18,
-				{angle: newAngle});
-		} else {
-			return _p18;
-		}
-	});
 var _sbaechler$polygon$Main$Loading = {ctor: 'Loading'};
 var _sbaechler$polygon$Main$Noop = {ctor: 'Noop'};
 var _sbaechler$polygon$Main$stopSound = function (sound) {
@@ -11635,177 +11592,12 @@ var _sbaechler$polygon$Main$playSound = F2(
 			_elm_lang$core$Basics$always(_sbaechler$polygon$Main$Noop),
 			A2(_sbaechler$polygon$Audio$playSound, options, sound));
 	});
-var _sbaechler$polygon$Main$onFrame = F2(
-	function (time, game) {
-		var _p20 = function () {
-			var _p21 = game.music;
-			if (_p21.ctor === 'Nothing') {
-				return {ctor: '_Tuple2', _0: _sbaechler$polygon$Main$Loading, _1: _elm_lang$core$Platform_Cmd$none};
-			} else {
-				var _p23 = _p21._0;
-				var _p22 = game.state;
-				switch (_p22.ctor) {
-					case 'Starting':
-						return {
-							ctor: '_Tuple2',
-							_0: _sbaechler$polygon$Main$Play,
-							_1: A2(
-								_sbaechler$polygon$Main$playSound,
-								_p23,
-								_elm_lang$core$Native_Utils.update(
-									_sbaechler$polygon$Main$playbackOptions,
-									{
-										startAt: _elm_lang$core$Maybe$Just(0)
-									}))
-						};
-					case 'Resume':
-						return {
-							ctor: '_Tuple2',
-							_0: _sbaechler$polygon$Main$Play,
-							_1: A2(_sbaechler$polygon$Main$playSound, _p23, _sbaechler$polygon$Main$playbackOptions)
-						};
-					case 'Pausing':
-						return {
-							ctor: '_Tuple2',
-							_0: _sbaechler$polygon$Main$Pause,
-							_1: _sbaechler$polygon$Main$stopSound(_p23)
-						};
-					case 'Play':
-						return _sbaechler$polygon$Main$isGameOver(game) ? {
-							ctor: '_Tuple2',
-							_0: _sbaechler$polygon$Main$GameOver,
-							_1: _sbaechler$polygon$Main$stopSound(_p23)
-						} : {ctor: '_Tuple2', _0: _sbaechler$polygon$Main$Play, _1: _elm_lang$core$Platform_Cmd$none};
-					default:
-						return {ctor: '_Tuple2', _0: game.state, _1: _elm_lang$core$Platform_Cmd$none};
-				}
-			}
-		}();
-		var nextState = _p20._0;
-		var nextCmd = _p20._1;
-		return {
-			ctor: '_Tuple2',
-			_0: _elm_lang$core$Native_Utils.update(
-				game,
-				{
-					player: A2(_sbaechler$polygon$Main$updatePlayer, game.direction, game),
-					enemies: _sbaechler$polygon$Main$updateEnemies(game),
-					enemySpeed: _sbaechler$polygon$Main$updateEnemySpeed(game),
-					state: nextState,
-					progress: _sbaechler$polygon$Main$updateProgress(game),
-					timeStart: _elm_lang$core$Native_Utils.eq(game.state, _sbaechler$polygon$Main$Starting) ? time : game.timeStart,
-					timeTick: time,
-					msRunning: A2(_sbaechler$polygon$Main$updateMsRunning, time, game),
-					autoRotateAngle: _sbaechler$polygon$Main$updateAutoRotateAngle(game),
-					autoRotateSpeed: _sbaechler$polygon$Main$updateAutoRotateSpeed(game),
-					hasBass: _sbaechler$polygon$Main$hasBass(game.msRunning)
-				}),
-			_1: nextCmd
-		};
-	});
 var _sbaechler$polygon$Main$MusicLoaded = function (a) {
 	return {ctor: 'MusicLoaded', _0: a};
 };
 var _sbaechler$polygon$Main$KeyboardExtraMsg = function (a) {
 	return {ctor: 'KeyboardExtraMsg', _0: a};
 };
-var _sbaechler$polygon$Main$onUserInput = F2(
-	function (keyMsg, game) {
-		var _p24 = A2(_ohanhi$keyboard_extra$Keyboard_Extra$update, keyMsg, game.keyboardModel);
-		var keyboardModel = _p24._0;
-		var keyboardCmd = _p24._1;
-		var spacebar = A2(_ohanhi$keyboard_extra$Keyboard_Extra$isPressed, _ohanhi$keyboard_extra$Keyboard_Extra$Space, keyboardModel) && _elm_lang$core$Basics$not(
-			A2(_ohanhi$keyboard_extra$Keyboard_Extra$isPressed, _ohanhi$keyboard_extra$Keyboard_Extra$Space, game.keyboardModel));
-		var nextState = function () {
-			var _p25 = game.state;
-			switch (_p25.ctor) {
-				case 'NewGame':
-					return spacebar ? _sbaechler$polygon$Main$Starting : _sbaechler$polygon$Main$NewGame;
-				case 'Play':
-					return spacebar ? _sbaechler$polygon$Main$Pausing : _sbaechler$polygon$Main$Play;
-				case 'GameOver':
-					return spacebar ? _sbaechler$polygon$Main$NewGame : _sbaechler$polygon$Main$GameOver;
-				case 'Pause':
-					return spacebar ? _sbaechler$polygon$Main$Resume : _sbaechler$polygon$Main$Pause;
-				default:
-					return game.state;
-			}
-		}();
-		return {
-			ctor: '_Tuple2',
-			_0: _elm_lang$core$Native_Utils.update(
-				game,
-				{
-					keyboardModel: keyboardModel,
-					direction: _ohanhi$keyboard_extra$Keyboard_Extra$arrows(keyboardModel).x,
-					state: nextState
-				}),
-			_1: A2(_elm_lang$core$Platform_Cmd$map, _sbaechler$polygon$Main$KeyboardExtraMsg, keyboardCmd)
-		};
-	});
-var _sbaechler$polygon$Main$update = F2(
-	function (msg, game) {
-		var _p26 = msg;
-		switch (_p26.ctor) {
-			case 'KeyboardExtraMsg':
-				return A2(_sbaechler$polygon$Main$onUserInput, _p26._0, game);
-			case 'Step':
-				return A2(_sbaechler$polygon$Main$onFrame, _p26._0, game);
-			case 'MusicLoaded':
-				return {
-					ctor: '_Tuple2',
-					_0: _elm_lang$core$Native_Utils.update(
-						game,
-						{
-							state: _sbaechler$polygon$Main$NewGame,
-							music: _elm_lang$core$Maybe$Just(_p26._0)
-						}),
-					_1: _elm_lang$core$Platform_Cmd$none
-				};
-			case 'Error':
-				return _elm_lang$core$Native_Utils.crashCase(
-					'Main',
-					{
-						start: {line: 280, column: 3},
-						end: {line: 289, column: 26}
-					},
-					_p26)(_p26._0);
-			default:
-				return {ctor: '_Tuple2', _0: game, _1: _elm_lang$core$Platform_Cmd$none};
-		}
-	});
-var _sbaechler$polygon$Main$init = function () {
-	var _p28 = _ohanhi$keyboard_extra$Keyboard_Extra$init;
-	var keyboardModel = _p28._0;
-	var keyboardCmd = _p28._1;
-	return {
-		ctor: '_Tuple2',
-		_0: {
-			player: _sbaechler$polygon$Main$Player(
-				_elm_lang$core$Basics$degrees(30)),
-			enemies: _elm_lang$core$Native_List.fromArray(
-				[]),
-			enemySpeed: 0.0,
-			state: _sbaechler$polygon$Main$Loading,
-			progress: 0,
-			timeStart: 0.0,
-			timeTick: 0.0,
-			msRunning: 0.0,
-			autoRotateAngle: 0.0,
-			autoRotateSpeed: 0.0,
-			hasBass: false,
-			music: _elm_lang$core$Maybe$Nothing,
-			keyboardModel: keyboardModel,
-			direction: 0
-		},
-		_1: _elm_lang$core$Platform_Cmd$batch(
-			_elm_lang$core$Native_List.fromArray(
-				[
-					A2(_elm_lang$core$Platform_Cmd$map, _sbaechler$polygon$Main$KeyboardExtraMsg, keyboardCmd),
-					A3(_elm_lang$core$Task$perform, _sbaechler$polygon$Main$Error, _sbaechler$polygon$Main$MusicLoaded, _sbaechler$polygon$Main$loadSound)
-				]))
-	};
-}();
 var _sbaechler$polygon$Main$Step = function (a) {
 	return {ctor: 'Step', _0: a};
 };
@@ -11820,6 +11612,193 @@ var _sbaechler$polygon$Main$subscriptions = function (game) {
 				A2(_elm_lang$core$Platform_Sub$map, _sbaechler$polygon$Main$KeyboardExtraMsg, _ohanhi$keyboard_extra$Keyboard_Extra$subscriptions)
 			]));
 };
+var _sbaechler$polygon$Main$Still = {ctor: 'Still'};
+var _sbaechler$polygon$Main$init = function () {
+	var _p11 = _ohanhi$keyboard_extra$Keyboard_Extra$init;
+	var keyboardModel = _p11._0;
+	var keyboardCmd = _p11._1;
+	return {
+		ctor: '_Tuple2',
+		_0: {
+			player: _sbaechler$polygon$Main$Player(
+				_elm_lang$core$Basics$degrees(30)),
+			enemies: _elm_lang$core$Native_List.fromArray(
+				[]),
+			enemySpeed: 0.0,
+			state: _sbaechler$polygon$Main$Loading,
+			timeStart: 0.0,
+			timeTick: 0.0,
+			msRunning: 0.0,
+			autoRotateAngle: 0.0,
+			autoRotateSpeed: 0.0,
+			hasBass: false,
+			music: _elm_lang$core$Maybe$Nothing,
+			keyboardModel: keyboardModel,
+			direction: _sbaechler$polygon$Main$Still
+		},
+		_1: _elm_lang$core$Platform_Cmd$batch(
+			_elm_lang$core$Native_List.fromArray(
+				[
+					A2(_elm_lang$core$Platform_Cmd$map, _sbaechler$polygon$Main$KeyboardExtraMsg, keyboardCmd),
+					A3(_elm_lang$core$Task$perform, _sbaechler$polygon$Main$Error, _sbaechler$polygon$Main$MusicLoaded, _sbaechler$polygon$Main$loadSound)
+				]))
+	};
+}();
+var _sbaechler$polygon$Main$Right = {ctor: 'Right'};
+var _sbaechler$polygon$Main$Left = {ctor: 'Left'};
+var _sbaechler$polygon$Main$updatePlayerAngle = F2(
+	function (angle, dir) {
+		var sign = _elm_lang$core$Native_Utils.eq(dir, _sbaechler$polygon$Main$Left) ? 1 : (_elm_lang$core$Native_Utils.eq(dir, _sbaechler$polygon$Main$Right) ? -1 : 0);
+		var newAngle = angle + (_elm_lang$core$Basics$toFloat(sign) * _sbaechler$polygon$Main$playerSpeed);
+		return (_elm_lang$core$Native_Utils.cmp(newAngle, 0) < 0) ? (newAngle + (2 * _elm_lang$core$Basics$pi)) : ((_elm_lang$core$Native_Utils.cmp(newAngle, 2 * _elm_lang$core$Basics$pi) > 0) ? (newAngle - (2 * _elm_lang$core$Basics$pi)) : newAngle);
+	});
+var _sbaechler$polygon$Main$updatePlayer = F2(
+	function (dir, _p12) {
+		var _p13 = _p12;
+		var _p15 = _p13.state;
+		var _p14 = _p13.player;
+		if (_elm_lang$core$Native_Utils.eq(_p15, _sbaechler$polygon$Main$Play)) {
+			var newAngle = _elm_lang$core$Native_Utils.eq(_p15, _sbaechler$polygon$Main$NewGame) ? _elm_lang$core$Basics$degrees(30) : A2(_sbaechler$polygon$Main$updatePlayerAngle, _p14.angle, dir);
+			return _elm_lang$core$Native_Utils.update(
+				_p14,
+				{angle: newAngle});
+		} else {
+			return _p14;
+		}
+	});
+var _sbaechler$polygon$Main$onFrame = F2(
+	function (time, game) {
+		var _p16 = function () {
+			var _p17 = game.music;
+			if (_p17.ctor === 'Nothing') {
+				return {ctor: '_Tuple2', _0: _sbaechler$polygon$Main$Loading, _1: _elm_lang$core$Platform_Cmd$none};
+			} else {
+				var _p19 = _p17._0;
+				var _p18 = game.state;
+				switch (_p18.ctor) {
+					case 'Starting':
+						return {
+							ctor: '_Tuple2',
+							_0: _sbaechler$polygon$Main$Play,
+							_1: A2(
+								_sbaechler$polygon$Main$playSound,
+								_p19,
+								_elm_lang$core$Native_Utils.update(
+									_sbaechler$polygon$Main$playbackOptions,
+									{
+										startAt: _elm_lang$core$Maybe$Just(0)
+									}))
+						};
+					case 'Resume':
+						return {
+							ctor: '_Tuple2',
+							_0: _sbaechler$polygon$Main$Play,
+							_1: A2(_sbaechler$polygon$Main$playSound, _p19, _sbaechler$polygon$Main$playbackOptions)
+						};
+					case 'Pausing':
+						return {
+							ctor: '_Tuple2',
+							_0: _sbaechler$polygon$Main$Pause,
+							_1: _sbaechler$polygon$Main$stopSound(_p19)
+						};
+					case 'Play':
+						return _sbaechler$polygon$Main$isGameOver(game) ? {
+							ctor: '_Tuple2',
+							_0: _sbaechler$polygon$Main$GameOver,
+							_1: _sbaechler$polygon$Main$stopSound(_p19)
+						} : {ctor: '_Tuple2', _0: _sbaechler$polygon$Main$Play, _1: _elm_lang$core$Platform_Cmd$none};
+					default:
+						return {ctor: '_Tuple2', _0: game.state, _1: _elm_lang$core$Platform_Cmd$none};
+				}
+			}
+		}();
+		var nextState = _p16._0;
+		var nextCmd = _p16._1;
+		return {
+			ctor: '_Tuple2',
+			_0: _elm_lang$core$Native_Utils.update(
+				game,
+				{
+					player: A2(_sbaechler$polygon$Main$updatePlayer, game.direction, game),
+					enemies: _sbaechler$polygon$Main$updateEnemies(game),
+					enemySpeed: _sbaechler$polygon$Main$updateEnemySpeed(game),
+					state: nextState,
+					timeStart: _elm_lang$core$Native_Utils.eq(game.state, _sbaechler$polygon$Main$Starting) ? time : game.timeStart,
+					timeTick: time,
+					msRunning: A2(_sbaechler$polygon$Main$updateMsRunning, time, game),
+					autoRotateAngle: _sbaechler$polygon$Main$updateAutoRotateAngle(game),
+					autoRotateSpeed: _sbaechler$polygon$Main$updateAutoRotateSpeed(game),
+					hasBass: _sbaechler$polygon$Main$hasBass(game.msRunning)
+				}),
+			_1: nextCmd
+		};
+	});
+var _sbaechler$polygon$Main$onUserInput = F2(
+	function (keyMsg, game) {
+		var _p20 = A2(_ohanhi$keyboard_extra$Keyboard_Extra$update, keyMsg, game.keyboardModel);
+		var keyboardModel = _p20._0;
+		var keyboardCmd = _p20._1;
+		var spacebar = A2(_ohanhi$keyboard_extra$Keyboard_Extra$isPressed, _ohanhi$keyboard_extra$Keyboard_Extra$Space, keyboardModel) && _elm_lang$core$Basics$not(
+			A2(_ohanhi$keyboard_extra$Keyboard_Extra$isPressed, _ohanhi$keyboard_extra$Keyboard_Extra$Space, game.keyboardModel));
+		var nextState = function () {
+			var _p21 = game.state;
+			switch (_p21.ctor) {
+				case 'NewGame':
+					return spacebar ? _sbaechler$polygon$Main$Starting : _sbaechler$polygon$Main$NewGame;
+				case 'Play':
+					return spacebar ? _sbaechler$polygon$Main$Pausing : _sbaechler$polygon$Main$Play;
+				case 'GameOver':
+					return spacebar ? _sbaechler$polygon$Main$NewGame : _sbaechler$polygon$Main$GameOver;
+				case 'Pause':
+					return spacebar ? _sbaechler$polygon$Main$Resume : _sbaechler$polygon$Main$Pause;
+				default:
+					return game.state;
+			}
+		}();
+		var direction = (_elm_lang$core$Native_Utils.cmp(
+			_ohanhi$keyboard_extra$Keyboard_Extra$arrows(keyboardModel).x,
+			0) < 0) ? _sbaechler$polygon$Main$Left : ((_elm_lang$core$Native_Utils.cmp(
+			_ohanhi$keyboard_extra$Keyboard_Extra$arrows(keyboardModel).x,
+			0) > 0) ? _sbaechler$polygon$Main$Right : _sbaechler$polygon$Main$Still);
+		return {
+			ctor: '_Tuple2',
+			_0: _elm_lang$core$Native_Utils.update(
+				game,
+				{keyboardModel: keyboardModel, direction: direction, state: nextState}),
+			_1: A2(_elm_lang$core$Platform_Cmd$map, _sbaechler$polygon$Main$KeyboardExtraMsg, keyboardCmd)
+		};
+	});
+var _sbaechler$polygon$Main$update = F2(
+	function (msg, game) {
+		var _p22 = msg;
+		switch (_p22.ctor) {
+			case 'KeyboardExtraMsg':
+				return A2(_sbaechler$polygon$Main$onUserInput, _p22._0, game);
+			case 'Step':
+				return A2(_sbaechler$polygon$Main$onFrame, _p22._0, game);
+			case 'MusicLoaded':
+				return {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						game,
+						{
+							state: _sbaechler$polygon$Main$NewGame,
+							music: _elm_lang$core$Maybe$Just(_p22._0)
+						}),
+					_1: _elm_lang$core$Platform_Cmd$none
+				};
+			case 'Error':
+				return _elm_lang$core$Native_Utils.crashCase(
+					'Main',
+					{
+						start: {line: 293, column: 3},
+						end: {line: 302, column: 26}
+					},
+					_p22)(_p22._0);
+			default:
+				return {ctor: '_Tuple2', _0: game, _1: _elm_lang$core$Platform_Cmd$none};
+		}
+	});
 var _sbaechler$polygon$Main$main = {
 	main: _elm_lang$html$Html_App$program(
 		{init: _sbaechler$polygon$Main$init, update: _sbaechler$polygon$Main$update, view: _sbaechler$polygon$Main$view, subscriptions: _sbaechler$polygon$Main$subscriptions})
