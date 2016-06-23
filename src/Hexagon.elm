@@ -34,6 +34,8 @@ type Msg
 type alias Player =
   { angle: Float }
 
+type Direction = Left | Right | Still
+
 type alias Enemy =
   { radius : Float
   , parts : List(Bool)
@@ -43,17 +45,16 @@ type alias Enemy =
 type alias Game =
   {
     player : Player
+  , direction : Direction
   , enemies: List(Enemy)
   , enemySpeed: Float
+  , keyboardModel : Keyboard.Model
   , state : State
-  , progress : Int
   , timeStart : Time
   , timeTick : Time
   , msRunning : Float
   , autoRotateAngle : Float
   , autoRotateSpeed : Float
-  , direction : Int
-  , keyboardModel : Keyboard.Model
   , hasBass : Bool
   , music: Maybe Sound
   }
@@ -79,6 +80,20 @@ playerSpeed : Float
 playerSpeed = 0.128
 
 enemyThickness = 30
+enemyDistance = 350
+enemyInitialSpeed = 0.15
+enemyAcceleration = 0.000002
+
+enemies =
+  [ [False, True, False, True, False, True]
+  , [False, True, True, True, True, True]
+  , [True, False, True, True, True, True]
+  , [True, True, True, True, False, True]
+  , [True, True, True, False, True, True]
+  , [False, True, False, True, False, True]
+  , [True, False, True, False, True, False]
+  , [True, True, True, True, True, False]
+  ]
 
 startMessage = "SPACE to start, &larr;&rarr; to move"
 
@@ -89,10 +104,11 @@ beatPhase = 270 |> degrees  -- original: 180
 -- Calculate Beat Per Minute
 bpm : Float -> Float
 bpm beat =
-  (2.0 * pi * beat / 3600 )
+  (2.0 * pi * beat / 60 )
 
-pump : Int -> Float
-pump progress = beatAmplitude * (beat * toFloat progress + beatPhase |> sin)
+pump : Float -> Float
+pump progress =
+  beatAmplitude * (beat * progress / 1000 + beatPhase |> sin)
 
 -- MUSIC
 
@@ -124,10 +140,14 @@ stopSound sound =
 
 -- UPDATE
 
-updatePlayerAngle: Float -> Int -> Float
+updatePlayerAngle: Float -> Direction -> Float
 updatePlayerAngle angle dir =
   let
-    newAngle = (angle + toFloat -dir * playerSpeed)
+    sign =
+      if dir == Left then 1
+      else if dir == Right then -1
+      else 0
+    newAngle = (angle + toFloat (sign * 4) * 0.032)
   in
     if newAngle < 0 then
       newAngle + 2 * pi
@@ -152,19 +172,12 @@ colidesWith player enemy =
       False
     else
       -- check if open
-        indexedMap (,) enemy.parts |> filter snd |> map fst |> any collidesAtIndex
+      indexedMap (,) enemy.parts |> filter snd |> map fst |> any collidesAtIndex
 
 isGameOver: Game -> Bool
 isGameOver {player, enemies} =
   any (colidesWith player) enemies
 
-
-updateProgress: Game -> Int
-updateProgress {state,progress} =
-  case state of
-    NewGame -> 0
-    Play -> progress + 1
-    _ -> progress
 
 updateMsRunning: Time -> Game -> Time
 updateMsRunning timestamp game =
@@ -178,11 +191,11 @@ updateAutoRotateAngle {autoRotateAngle, autoRotateSpeed} =
   autoRotateAngle + autoRotateSpeed
 
 updateAutoRotateSpeed: Game -> Float
-updateAutoRotateSpeed {progress, autoRotateSpeed} =
-  0.02 * sin (toFloat progress * 0.005)
+updateAutoRotateSpeed {msRunning, autoRotateSpeed} =
+  0.02 * sin (msRunning * 0.0003)
 
-updatePlayer: Int -> Game -> Player
-updatePlayer dir {player, state} =
+updatePlayer: Direction -> Game -> Player
+updatePlayer dir {player, enemies, state} =
   if state == Play then
     let
       newAngle = if state == NewGame then degrees 30
@@ -195,29 +208,26 @@ updatePlayer dir {player, state} =
 updateEnemies: Game -> List(Enemy)
 updateEnemies game =
   let
-    enemyDistance = 300
-    partsFor index =
-      case index of
-        0 -> [True, True, True, False, True, True]
-        1 -> [True, True, True, False, True, True]
-        2 -> [False, True, False, True, True, True]
-        3 -> [False, True, True, True, True, True]
-        _ -> [True, False, True, True, True, True]
+    enemyProgress = game.msRunning * game.enemySpeed
+    numEnemies = List.length enemies
+    maxDistance = numEnemies * enemyDistance
+
+    offsetForEnemy index =
+      round <| enemyDistance * (toFloat index) - enemyProgress
+
     radiusFor index =
-      toFloat (enemyThickness + (iHalfWidth + round (( enemyDistance * (toFloat index))
-      - (toFloat game.progress) * game.enemySpeed)) % (enemyDistance * 5))
+      (offsetForEnemy index) % maxDistance
+      |> toFloat
   in
-   [
-      {parts = partsFor 0, radius = radiusFor 0}
-    , {parts = partsFor 1, radius = radiusFor 1}
-    , {parts = partsFor 2, radius = radiusFor 2}
-    , {parts = partsFor 3, radius = radiusFor 3}
-    , {parts = partsFor 4, radius = radiusFor 4}
-    ]
+    List.indexedMap (\index parts -> {
+      parts = parts,
+      radius = radiusFor index
+    }) enemies
+
 
 updateEnemySpeed: Game -> Float
 updateEnemySpeed game =
-  2 + (toFloat game.progress)/1000
+  enemyInitialSpeed + game.msRunning * enemyAcceleration
 
 
 {-| Updates the game state on a keyboard command -}
@@ -228,6 +238,10 @@ onUserInput keyMsg game =
       Keyboard.update keyMsg game.keyboardModel
     spacebar = Keyboard.isPressed Keyboard.Space keyboardModel &&
             not (Keyboard.isPressed Keyboard.Space game.keyboardModel)
+    direction =
+      if (Keyboard.arrows keyboardModel).x < 0 then Left
+      else if (Keyboard.arrows keyboardModel).x > 0 then Right
+      else Still
     nextState =
       case game.state of
         NewGame -> if spacebar then Starting else NewGame
@@ -237,7 +251,7 @@ onUserInput keyMsg game =
         _ -> game.state
   in
     ( { game | keyboardModel = keyboardModel
-             , direction = (Keyboard.arrows keyboardModel).x
+             , direction = direction
              , state = nextState
       }
     , Cmd.map KeyboardExtraMsg keyboardCmd )
@@ -264,7 +278,6 @@ onFrame time game =
       , enemies = updateEnemies game
       , enemySpeed = updateEnemySpeed game
       , state =  nextState
-      , progress = updateProgress game
       , timeStart = if game.state == Starting then time else game.timeStart
       , timeTick = time
       , msRunning = updateMsRunning time game
@@ -364,10 +377,9 @@ makeField colors =
 makeCenterHole : Colors -> Game -> List Form
 makeCenterHole colors game =
   let
-    bassAdd = if game.hasBass then
-        100.0 * beatAmplitude
-      else
-        100.0 * (pump game.progress)
+    bassAdd =
+      if game.hasBass then 0
+      else 100.0 * (pump game.msRunning)
     shape = ngon 6 (60 + bassAdd)
     line = solid colors.bright
   in
@@ -379,10 +391,10 @@ makeCenterHole colors game =
         |> rotate (degrees 90)
     ]
 
-makeColors : Int -> Colors
-makeColors progress =
+makeColors : Float -> Colors
+makeColors msRunning =
   let
-    hue = degrees 0.1 * (toFloat <| progress % 3600)
+    hue = 0.00005 * msRunning
   in
     { dark = (hsl hue 0.6 0.2)
     , medium = (hsl hue 0.6 0.3)
@@ -400,7 +412,7 @@ makeTextBox size string =
 beatPulse : Game -> Form -> Form
 beatPulse game =
   if game.hasBass then
-    scale (1 + (pump game.progress))
+    scale (1 + (pump game.msRunning))
   else
     identity
 
@@ -417,7 +429,7 @@ formatTime running =
 view : Game -> Html.Html Msg
 view game =
   let
-    colors = makeColors game.progress
+    colors = makeColors game.msRunning
     score =
       formatTime game.msRunning
       |> makeTextBox 50
@@ -473,7 +485,6 @@ init =
       , enemies = []
       , enemySpeed = 0.0
       , state = Loading
-      , progress = 0
       , timeStart = 0.0
       , timeTick = 0.0
       , msRunning = 0.0
@@ -482,7 +493,7 @@ init =
       , hasBass = False
       , music = Nothing
       , keyboardModel = keyboardModel
-      , direction = 0
+      , direction = Still
       }
     , Cmd.batch
       [ Cmd.map KeyboardExtraMsg keyboardCmd
