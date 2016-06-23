@@ -77,11 +77,11 @@ playerRadius : Float
 playerRadius = gameWidth / 10.0
 
 playerSpeed : Float
-playerSpeed = 0.128
+playerSpeed = 0.12
 
 enemyThickness = 30
 enemyDistance = 350
-enemyInitialSpeed = 0.15
+enemyInitialSpeed = 0.25
 enemyAcceleration = 0.000002
 
 enemies =
@@ -147,7 +147,7 @@ updatePlayerAngle angle dir =
       if dir == Left then 1
       else if dir == Right then -1
       else 0
-    newAngle = (angle + toFloat (sign * 4) * 0.032)
+    newAngle = angle + toFloat sign * playerSpeed
   in
     if newAngle < 0 then
       newAngle + 2 * pi
