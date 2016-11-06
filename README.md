@@ -1,5 +1,7 @@
 # hexagon
 
+This is the code for the [Elm hexagon tutorial](https://www.gitbook.com/book/sbaechler/elm-hexagon/details)
+
 ## Development
 
 Start local server in root directory:
